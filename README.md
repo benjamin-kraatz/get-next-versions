@@ -1,5 +1,7 @@
 # Get Next Versions
 
+> ⚠️ **Development Status**: This package is currently in early development (version < 1.0). The API and functionality may change significantly between releases. Use with caution in production environments.
+
 Automated versioning tool based on conventional commits and package dependencies. Available as both an NPM package and a GitHub Action.
 
 ## Overview
