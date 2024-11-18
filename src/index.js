@@ -10,9 +10,6 @@ const __dirname = dirname(__filename);
 const CONFIG_PATH = resolve(process.cwd(), 'release-config.json');
 const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
 
-// Check if --json flag is passed
-let jsonOutput = process.argv.includes('--json');
-
 // Add color support
 const colors = {
   reset: "\x1b[0m",
@@ -67,10 +64,6 @@ function determineNextVersion(commits) {
   let patch = false;
 
   commits.forEach(({ message }) => {
-    if (!jsonOutput) {
-      console.log('Analyzing commit message:', message);
-    }
-
     const match = message.match(/^([a-z]+)(?:\(([^)]+)\))?(!)?:/);
     if (match) {
       const [, type, scope, breaking] = match;
@@ -104,122 +97,94 @@ function getNextVersion(currentVersion, changes) {
   return null;
 }
 
-// Track affected packages with their changes
+// Initialize maps to store changes and version updates
 const packageChanges = new Map();
-
-function addPackageChange(pkg, hash, message, reason) {
-  if (!packageChanges.has(pkg)) {
-    packageChanges.set(pkg, new Map());
-  }
-  const pkgChanges = packageChanges.get(pkg);
-  if (!pkgChanges.has(hash)) {
-    pkgChanges.set(hash, { hash, message, reasons: [] });
-  }
-  pkgChanges.get(hash).reasons.push(reason);
-}
-
-// Process all commits and their changes
-const packageCommits = new Map();
-
-// Get commits for each package since their last tag
-config.versionedPackages.forEach(pkg => {
-  const range = getCommitRange(pkg.tagPrefix);
-  try {
-    const commits = execSync(`git log ${range} --format="%H %s"`).toString().trim().split('\n').filter(Boolean);
-    if (!jsonOutput) {
-      console.log(`Found ${commits.length} commits for ${pkg.name} since ${pkg.tagPrefix}`);
-    }
-    packageCommits.set(pkg.name, commits);
-  } catch (error) {
-    if (!jsonOutput) {
-      console.log(`No commits found for ${pkg.name} since last tag`);
-    }
-    packageCommits.set(pkg.name, []);
-  }
-});
-
-// Process commits for each package
-config.versionedPackages.forEach(pkg => {
-  const commits = packageCommits.get(pkg.name);
-  
-  commits.forEach(commit => {
-    if (!commit) return;
-    const [hash, ...messageParts] = commit.split(' ');
-    const message = messageParts.join(' ');
-
-    // Get changed files in this commit
-    const changedFiles = execSync(`git diff-tree --no-commit-id --name-only -r ${hash}`).toString().trim();
-
-    // Check for direct changes in package directory
-    if (changedFiles.includes(pkg.directory)) {
-      addPackageChange(pkg.name, hash, message, `Direct changes in ${pkg.directory}`);
-    }
-
-    // Check conventional commit scope
-    const scopeMatch = message.match(/^[a-z]+\(([^)]+)\)(!)?:/);
-    if (scopeMatch && scopeMatch[1] === pkg.name) {
-      addPackageChange(pkg.name, hash, message, `Commit scoped to ${pkg.name}`);
-    }
-
-    // Check dependencies if specified
-    if (pkg.dependsOn) {
-      const changedFilesList = changedFiles.split('\n');
-      pkg.dependsOn.forEach(dep => {
-        // Convert glob pattern to a regular string for basic matching
-        // This handles the basic case of "packages/*" -> "packages/"
-        const depPattern = dep.replace('*', '');
-        
-        // Check if any of the changed files match this dependency pattern
-        const matchingChanges = changedFilesList.filter(file => file.startsWith(depPattern));
-        if (matchingChanges.length > 0) {
-          // Add details about which specific files in the dependency changed
-          const affectingFiles = matchingChanges.join(', ');
-          addPackageChange(pkg.name, hash, message, 
-            `Changes in dependent package ${dep} affect this package: ${affectingFiles}`);
-        }
-      });
-    }
-  });
-});
-
-// Calculate version updates
 const versionUpdates = new Map();
-
-// Process each package's changes and determine version updates
-config.versionedPackages.forEach(pkg => {
-  if (packageChanges.has(pkg.name)) {
-    const changes = packageChanges.get(pkg.name);
-    const currentVersion = getCurrentVersion(pkg.tagPrefix);
-    const versionChanges = determineNextVersion(changes);
-    const nextVersion = getNextVersion(currentVersion, versionChanges);
-    
-    if (nextVersion) {
-      versionUpdates.set(pkg.name, {
-        tagPrefix: pkg.tagPrefix,
-        currentVersion,
-        nextVersion,
-        changes
-      });
-    }
-  }
-});
-
-// Export functions for testing
-export {
-  getLastTag,
-  getCurrentVersion,
-  determineNextVersion,
-  getNextVersion,
-  formatCommit,
-  printSection,
-  getCommitRange,
-};
+let jsonOutput = false;
 
 // Function to check versions
 export function checkVersions(isCI = false) {
   try {
     // Set json output based on CI environment or --json flag
     jsonOutput = isCI || process.argv.includes('--json');
+    
+    // Clear any existing data
+    packageChanges.clear();
+    versionUpdates.clear();
+    
+    // Analyze commits for each package
+    config.versionedPackages.forEach(pkg => {
+      const range = getCommitRange(pkg.tagPrefix);
+      try {
+        const commits = execSync(`git log ${range} --format="%H %s"`).toString().trim().split('\n').filter(Boolean);
+        if (!jsonOutput) {
+          console.log('\n' + colors.cyan + '📦 Package:' + colors.reset, colors.bright + pkg.name + colors.reset);
+          console.log(colors.dim + `Found ${commits.length} commits since ${pkg.tagPrefix}` + colors.reset + '\n');
+        }
+        
+        const changes = new Set();
+        commits.forEach(commit => {
+          if (!commit) return;
+          const [hash, ...messageParts] = commit.split(' ');
+          const message = messageParts.join(' ');
+          
+          if (!jsonOutput) {
+            console.log(colors.magenta + '🔍 Analyzing:' + colors.reset, colors.dim + hash.slice(0, 7) + colors.reset, '-', colors.bright + message + colors.reset);
+          }
+          
+          const reasons = [];
+          
+          // Get changed files in this commit
+          const changedFiles = execSync(`git diff-tree --no-commit-id --name-only -r ${hash}`).toString().trim();
+          const changedFilesList = changedFiles.split('\n');
+          
+          // Check for direct changes in package directory
+          if (changedFilesList.some(file => file.startsWith(pkg.directory))) {
+            reasons.push(`Direct changes in ${pkg.directory}`);
+          }
+          
+          // Check conventional commit scope
+          const scopeMatch = message.match(/^[a-z]+\(([^)]+)\)(!)?:/);
+          if (scopeMatch && scopeMatch[1] === pkg.name) {
+            reasons.push(`Commit scoped to ${pkg.name}`);
+          }
+
+          // Check dependencies if specified
+          if (pkg.dependsOn) {
+            pkg.dependsOn.forEach(dep => {
+              // Convert glob pattern to a regular string for basic matching
+              // This handles the basic case of "packages/*" -> "packages/"
+              const depPattern = dep.replace('*', '');
+              
+              // Check if any of the changed files match this dependency pattern
+              const matchingChanges = changedFilesList.filter(file => file.startsWith(depPattern));
+              if (matchingChanges.length > 0) {
+                // Add details about which specific files in the dependency changed
+                const affectingFiles = matchingChanges.join(', ');
+                reasons.push(`Changes in dependent package ${dep} affect this package: ${affectingFiles}`);
+              }
+            });
+          }
+          
+          // If we found reasons for this commit affecting the package, add it
+          if (reasons.length > 0) {
+            changes.add({
+              hash,
+              message,
+              reasons
+            });
+          }
+        });
+        
+        if (changes.size > 0) {
+          packageChanges.set(pkg.name, changes);
+        }
+      } catch (error) {
+        if (!jsonOutput) {
+          console.log(`No commits found for ${pkg.name} since last tag`);
+        }
+      }
+    });
     
     // Process each package's changes and determine version updates
     config.versionedPackages.forEach(pkg => {
@@ -316,3 +281,14 @@ export function checkVersions(isCI = false) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   checkVersions(process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true');
 }
+
+// Export functions for testing
+export {
+  getLastTag,
+  getCurrentVersion,
+  determineNextVersion,
+  getNextVersion,
+  formatCommit,
+  printSection,
+  getCommitRange,
+};
