@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "get-next-versions": "./bin/get-next-versions.js"
+    "get-next-versions": "bin/get-next-versions.js"
   },
   "files": [
     "dist",
@@ -42,10 +42,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/get-next-versions.git"
+    "url": "git+https://github.com/benjamin-kraatz/get-next-versions.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/get-next-versions/issues"
+    "url": "https://github.com/benjamin-kraatz/get-next-versions/issues"
   },
-  "homepage": "https://github.com/yourusername/get-next-versions#readme"
+  "homepage": "https://github.com/benjamin-kraatz/get-next-versions#readme"
 }
