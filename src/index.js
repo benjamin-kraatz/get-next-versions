@@ -204,62 +204,6 @@ config.versionedPackages.forEach(pkg => {
   }
 });
 
-// Output results
-if (jsonOutput) {
-  const output = {};
-  
-  config.versionedPackages.forEach(pkg => {
-    output[pkg.name] = {
-      currentVersion: getCurrentVersion(pkg.tagPrefix),
-      nextVersion: versionUpdates.has(pkg.name) ? versionUpdates.get(pkg.name).nextVersion : null,
-      hasChanges: packageChanges.has(pkg.name)
-    };
-  });
-  
-  console.log(JSON.stringify(output));
-} else {
-  console.log('\n' + colors.bright + colors.magenta + '🚀 Release Check Summary' + colors.reset + '\n');
-  console.log(colors.dim + '=' .repeat(50) + colors.reset + '\n');
-
-  // Changes Overview
-  printSection('📦 Changes Detected:');
-  if (packageChanges.size > 0) {
-    packageChanges.forEach((changes, pkg) => {
-      console.log(`${colors.green}✓${colors.reset} ${pkg}: ${colors.cyan}${changes.size}${colors.reset} commits`);
-    });
-  } else {
-    console.log(`${colors.yellow}⚠ No changes detected${colors.reset}`);
-  }
-
-  // Version Updates
-  printSection('📝 Version Updates:');
-  if (versionUpdates.size > 0) {
-    versionUpdates.forEach(({ tagPrefix, currentVersion, nextVersion }, pkg) => {
-      console.log(`${colors.green}✓${colors.reset} ${pkg}: ${colors.dim}${tagPrefix}${currentVersion}${colors.reset} → ${colors.bright}${tagPrefix}${nextVersion}${colors.reset}`);
-    });
-  } else {
-    console.log(`${colors.yellow}⚠ No version updates needed${colors.reset}`);
-  }
-
-  // Detailed Changes
-  printSection('🔍 Detailed Changes:');
-  if (packageChanges.size > 0) {
-    packageChanges.forEach((changes, pkg) => {
-      console.log(`\n${colors.cyan}${pkg}${colors.reset}:`);
-      changes.forEach(({ hash, message, reasons }) => {
-        console.log(`  ${colors.green}•${colors.reset} ${formatCommit(hash, message)}`);
-        reasons.forEach(reason => {
-          console.log(`    ${colors.dim}↳ ${reason}${colors.reset}`);
-        });
-      });
-    });
-  } else {
-    console.log(`${colors.yellow}⚠ No detailed changes to show${colors.reset}`);
-  }
-
-  console.log('\n' + colors.dim + '=' .repeat(50) + colors.reset + '\n');
-}
-
 // Export functions for testing
 export {
   getLastTag,
@@ -269,14 +213,13 @@ export {
   formatCommit,
   printSection,
   getCommitRange,
-  checkVersions
 };
 
 // Function to check versions
-function checkVersions(isCI = false) {
+export function checkVersions(isCI = false) {
   try {
-    // Set json output based on CI environment
-    jsonOutput = isCI;
+    // Set json output based on CI environment or --json flag
+    jsonOutput = isCI || process.argv.includes('--json');
     
     // Process each package's changes and determine version updates
     config.versionedPackages.forEach(pkg => {
@@ -310,6 +253,7 @@ function checkVersions(isCI = false) {
       });
       
       console.log(JSON.stringify(output));
+      return output;
     } else {
       console.log('\n' + colors.bright + colors.magenta + '🚀 Release Check Summary' + colors.reset + '\n');
       console.log(colors.dim + '=' .repeat(50) + colors.reset + '\n');
@@ -351,6 +295,16 @@ function checkVersions(isCI = false) {
       }
 
       console.log('\n' + colors.dim + '=' .repeat(50) + colors.reset + '\n');
+      
+      const output = {};
+      config.versionedPackages.forEach(pkg => {
+        output[pkg.name] = {
+          currentVersion: getCurrentVersion(pkg.tagPrefix),
+          nextVersion: versionUpdates.has(pkg.name) ? versionUpdates.get(pkg.name).nextVersion : null,
+          hasChanges: packageChanges.has(pkg.name)
+        };
+      });
+      return output;
     }
   } catch (error) {
     console.error('Error:', error.message);
