@@ -37,8 +37,10 @@ function printSection(title, content = '') {
 
 function getLastTag(prefix) {
   try {
+    // For root packages with just 'v', we need to be more careful about the match pattern
+    const matchPattern = prefix === 'v' ? 'v[0-9]*' : `${prefix}*`;
     // Redirect stderr to /dev/null to suppress "fatal: No names found" message
-    return execSync(`git describe --tags --match "${prefix}*" --abbrev=0 2>/dev/null`).toString().trim();
+    return execSync(`git describe --tags --match "${matchPattern}" --abbrev=0 2>/dev/null`).toString().trim();
   } catch (error) {
     return '';
   }
@@ -67,16 +69,16 @@ function determineNextVersion(commits) {
     console.log('\n' + colors.yellow + '🔍 Analyzing commits for version bump:' + colors.reset);
   }
 
-  commits.forEach(({ message }) => {
+  commits.forEach(({ message, breaking }) => {
     const match = message.match(/^([a-z]+)(?:\(([^)]+)\))?(!)?:/);
     if (match) {
-      const [, type, scope, breaking] = match;
+      const [, type, scope, breakingMark] = match;
 
       if (!jsonOutput) {
         console.log(colors.dim + '  Type:' + colors.reset, colors.cyan + type + colors.reset);
       }
 
-      if (message.includes('BREAKING CHANGE:') || breaking) {
+      if (breaking || breakingMark || message.includes('BREAKING CHANGE:')) {
         major = true;
         if (!jsonOutput) console.log(colors.dim + '  → Major bump (breaking change)' + colors.reset);
       } else if (type === 'feat') {
@@ -99,7 +101,6 @@ function determineNextVersion(commits) {
        'No version bump needed') + colors.reset + '\n');
   }
 
-  // Return format compatible with tests
   return { major, minor, patch };
 }
 
@@ -167,105 +168,77 @@ export function checkVersions(isCI = false) {
           if (!match) return;
           
           const [, type, scope, breaking] = match;
-          if (!['feat', 'fix'].includes(type) && !breaking && !message.includes('BREAKING CHANGE:')) {
+
+          // Consider all feat, fix, and breaking changes
+          const isVersioningCommit = type === 'feat' || type === 'fix' || breaking || message.includes('BREAKING CHANGE:');
+          if (!isVersioningCommit) {
             if (!jsonOutput) {
               console.log(colors.dim + '  → Skipping non-versioning commit' + colors.reset);
             }
             return;
           }
-
-          const reasons = [];
-          let hasRelevantChanges = false;
           
-          // Get changed files in this commit
+          // Add the commit regardless of file changes for version determination
+          changes.add({
+            hash,
+            message,
+            type,
+            breaking: breaking || message.includes('BREAKING CHANGE:'),
+            reasons: ['Versioning commit detected']
+          });
+
+          // Get changed files in this commit for informational purposes
           const changedFiles = execSync(`git diff-tree --no-commit-id --name-only -r ${hash}`).toString().trim();
           const changedFilesList = changedFiles.split('\n');
 
           if (!jsonOutput) {
-            console.log(colors.dim + '  Changed files:' + colors.reset);
-            changedFilesList.forEach(file => {
-              console.log(colors.dim + '    - ' + file + colors.reset);
-            });
+            const changedFilesCount = changedFilesList.length;
+            console.log(colors.dim + `  Changed files: ${changedFilesCount}` + colors.reset);
           }
 
-          // For feat commits and breaking changes, always consider them relevant
-          if (type === 'feat' || breaking || message.includes('BREAKING CHANGE:')) {
-            hasRelevantChanges = true;
-            reasons.push(`${type === 'feat' ? 'Feature' : 'Breaking'} change affects all packages`);
+          // Add additional reasons if files match package criteria
+          const reasons = [];
+
+          // If it's a root package or no directory specified, all changes are relevant
+          if (!pkg.directory || pkg.directory === '.') {
+            reasons.push('Root package - considering all changes');
           } else {
-            // For other commit types, check if they affect the package directory or dependencies
-            // Check for direct changes in package directory
-            if (pkg.directory === '.' || changedFilesList.some(file => {
-              // Normalize paths to handle different separators
+            // For non-root packages, check if files are in the package directory
+            if (changedFilesList.some(file => {
               const normalizedFile = file.replace(/\\/g, '/');
               const normalizedDir = pkg.directory.replace(/\\/g, '/');
-              const isMatch = normalizedFile.startsWith(normalizedDir + '/') || normalizedFile === normalizedDir;
-              if (!jsonOutput) {
-                console.log(colors.dim + `  Checking file ${normalizedFile} against directory ${normalizedDir}: ${isMatch}` + colors.reset);
-              }
-              return isMatch;
+              // For root directory ('.'), any file is considered a match
+              return normalizedDir === '.' ? true : (normalizedFile.startsWith(normalizedDir + '/') || normalizedFile === normalizedDir);
             })) {
-              const dirName = pkg.directory === '.' ? 'root' : pkg.directory;
-              reasons.push(`Direct changes in ${dirName}`);
-              hasRelevantChanges = true;
+              reasons.push(`Direct changes in ${pkg.directory}`);
             }
-            
-            // Check conventional commit scope
-            const scopeMatch = message.match(/^[a-z]+\(([^)]+)\)(!)?:/);
-            if (scopeMatch && scopeMatch[1] === pkg.name) {
+
+            // Check if commit is scoped to this package
+            if (scope === pkg.name) {
               reasons.push(`Commit scoped to ${pkg.name}`);
-              hasRelevantChanges = true;
             }
 
-            // If no package directory is specified, consider all changes
-            if (!pkg.directory) {
-              reasons.push('No directory specified, considering all changes');
-              hasRelevantChanges = true;
-            }
-
-            // Check dependencies if specified
+            // Check dependencies
             if (pkg.dependsOn) {
               pkg.dependsOn.forEach(dep => {
-                // Convert glob pattern to a regular string for basic matching
-                // This handles the basic case of "packages/*" -> "packages/"
                 const depPattern = dep.replace('*', '');
-                
-                // Check if any of the changed files match this dependency pattern
                 const matchingChanges = changedFilesList.filter(file => {
-                  // Normalize paths to handle different separators
                   const normalizedFile = file.replace(/\\/g, '/');
                   const normalizedPattern = depPattern.replace(/\\/g, '/');
-                  const isMatch = normalizedFile.startsWith(normalizedPattern + '/') || normalizedFile === normalizedPattern;
-                  if (!jsonOutput) {
-                    console.log(colors.dim + `  Checking file ${normalizedFile} against dependency ${normalizedPattern}: ${isMatch}` + colors.reset);
-                  }
-                  return isMatch;
+                  return normalizedFile.startsWith(normalizedPattern + '/') || normalizedFile === normalizedPattern;
                 });
                 if (matchingChanges.length > 0) {
-                  // Add details about which specific files in the dependency changed
-                  const affectingFiles = matchingChanges.join(', ');
-                  reasons.push(`Changes in dependent package ${dep} affect this package: ${affectingFiles}`);
-                  hasRelevantChanges = true;
+                  reasons.push(`Changes in dependent package ${dep}`);
                 }
               });
             }
           }
-          
-          // If we found reasons for this commit affecting the package, add it
-          if (hasRelevantChanges) {
-            if (!jsonOutput) {
-              console.log(colors.green + '  → Adding commit to changes' + colors.reset);
-            }
-            changes.add({
-              hash,
-              message,
-              type,
-              breaking: breaking || message.includes('BREAKING CHANGE:'),
-              reasons
-            });
-          } else {
-            if (!jsonOutput) {
-              console.log(colors.dim + '  → No relevant changes found' + colors.reset);
+
+          if (reasons.length > 0) {
+            // Convert the Set to an array to get the last item
+            const changesArray = Array.from(changes);
+            if (changesArray.length > 0) {
+              changesArray[changesArray.length - 1].reasons.push(...reasons);
             }
           }
         });
