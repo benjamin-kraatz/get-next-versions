@@ -180,41 +180,82 @@ export function checkVersions(isCI = false) {
           // Get changed files in this commit
           const changedFiles = execSync(`git diff-tree --no-commit-id --name-only -r ${hash}`).toString().trim();
           const changedFilesList = changedFiles.split('\n');
-          
-          // Check for direct changes in package directory
-          if (pkg.directory === '.' || changedFilesList.some(file => file.startsWith(pkg.directory))) {
-            const dirName = pkg.directory === '.' ? 'root' : pkg.directory;
-            reasons.push(`Direct changes in ${dirName}`);
-            hasRelevantChanges = true;
-          }
-          
-          // Check conventional commit scope
-          const scopeMatch = message.match(/^[a-z]+\(([^)]+)\)(!)?:/);
-          if (scopeMatch && scopeMatch[1] === pkg.name) {
-            reasons.push(`Commit scoped to ${pkg.name}`);
-            hasRelevantChanges = true;
+
+          if (!jsonOutput) {
+            console.log(colors.dim + '  Changed files:' + colors.reset);
+            changedFilesList.forEach(file => {
+              console.log(colors.dim + '    - ' + file + colors.reset);
+            });
           }
 
-          // Check dependencies if specified
-          if (pkg.dependsOn) {
-            pkg.dependsOn.forEach(dep => {
-              // Convert glob pattern to a regular string for basic matching
-              // This handles the basic case of "packages/*" -> "packages/"
-              const depPattern = dep.replace('*', '');
-              
-              // Check if any of the changed files match this dependency pattern
-              const matchingChanges = changedFilesList.filter(file => file.startsWith(depPattern));
-              if (matchingChanges.length > 0) {
-                // Add details about which specific files in the dependency changed
-                const affectingFiles = matchingChanges.join(', ');
-                reasons.push(`Changes in dependent package ${dep} affect this package: ${affectingFiles}`);
-                hasRelevantChanges = true;
+          // For feat commits and breaking changes, always consider them relevant
+          if (type === 'feat' || breaking || message.includes('BREAKING CHANGE:')) {
+            hasRelevantChanges = true;
+            reasons.push(`${type === 'feat' ? 'Feature' : 'Breaking'} change affects all packages`);
+          } else {
+            // For other commit types, check if they affect the package directory or dependencies
+            // Check for direct changes in package directory
+            if (pkg.directory === '.' || changedFilesList.some(file => {
+              // Normalize paths to handle different separators
+              const normalizedFile = file.replace(/\\/g, '/');
+              const normalizedDir = pkg.directory.replace(/\\/g, '/');
+              const isMatch = normalizedFile.startsWith(normalizedDir + '/') || normalizedFile === normalizedDir;
+              if (!jsonOutput) {
+                console.log(colors.dim + `  Checking file ${normalizedFile} against directory ${normalizedDir}: ${isMatch}` + colors.reset);
               }
-            });
+              return isMatch;
+            })) {
+              const dirName = pkg.directory === '.' ? 'root' : pkg.directory;
+              reasons.push(`Direct changes in ${dirName}`);
+              hasRelevantChanges = true;
+            }
+            
+            // Check conventional commit scope
+            const scopeMatch = message.match(/^[a-z]+\(([^)]+)\)(!)?:/);
+            if (scopeMatch && scopeMatch[1] === pkg.name) {
+              reasons.push(`Commit scoped to ${pkg.name}`);
+              hasRelevantChanges = true;
+            }
+
+            // If no package directory is specified, consider all changes
+            if (!pkg.directory) {
+              reasons.push('No directory specified, considering all changes');
+              hasRelevantChanges = true;
+            }
+
+            // Check dependencies if specified
+            if (pkg.dependsOn) {
+              pkg.dependsOn.forEach(dep => {
+                // Convert glob pattern to a regular string for basic matching
+                // This handles the basic case of "packages/*" -> "packages/"
+                const depPattern = dep.replace('*', '');
+                
+                // Check if any of the changed files match this dependency pattern
+                const matchingChanges = changedFilesList.filter(file => {
+                  // Normalize paths to handle different separators
+                  const normalizedFile = file.replace(/\\/g, '/');
+                  const normalizedPattern = depPattern.replace(/\\/g, '/');
+                  const isMatch = normalizedFile.startsWith(normalizedPattern + '/') || normalizedFile === normalizedPattern;
+                  if (!jsonOutput) {
+                    console.log(colors.dim + `  Checking file ${normalizedFile} against dependency ${normalizedPattern}: ${isMatch}` + colors.reset);
+                  }
+                  return isMatch;
+                });
+                if (matchingChanges.length > 0) {
+                  // Add details about which specific files in the dependency changed
+                  const affectingFiles = matchingChanges.join(', ');
+                  reasons.push(`Changes in dependent package ${dep} affect this package: ${affectingFiles}`);
+                  hasRelevantChanges = true;
+                }
+              });
+            }
           }
           
           // If we found reasons for this commit affecting the package, add it
-          if (reasons.length > 0 && hasRelevantChanges) {
+          if (hasRelevantChanges) {
+            if (!jsonOutput) {
+              console.log(colors.green + '  → Adding commit to changes' + colors.reset);
+            }
             changes.add({
               hash,
               message,
@@ -222,6 +263,10 @@ export function checkVersions(isCI = false) {
               breaking: breaking || message.includes('BREAKING CHANGE:'),
               reasons
             });
+          } else {
+            if (!jsonOutput) {
+              console.log(colors.dim + '  → No relevant changes found' + colors.reset);
+            }
           }
         });
         
