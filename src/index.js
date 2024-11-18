@@ -63,34 +63,64 @@ function determineNextVersion(commits) {
   let minor = false;
   let patch = false;
 
+  if (!jsonOutput) {
+    console.log('\n' + colors.yellow + '🔍 Analyzing commits for version bump:' + colors.reset);
+  }
+
   commits.forEach(({ message }) => {
     const match = message.match(/^([a-z]+)(?:\(([^)]+)\))?(!)?:/);
     if (match) {
       const [, type, scope, breaking] = match;
 
+      if (!jsonOutput) {
+        console.log(colors.dim + '  Type:' + colors.reset, colors.cyan + type + colors.reset);
+      }
+
       if (message.includes('BREAKING CHANGE:') || breaking) {
         major = true;
+        if (!jsonOutput) console.log(colors.dim + '  → Major bump (breaking change)' + colors.reset);
       } else if (type === 'feat') {
         minor = true;
-      } else if (['fix', 'chore', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci'].includes(type)) {
+        if (!jsonOutput) console.log(colors.dim + '  → Minor bump (new feature)' + colors.reset);
+      } else if (type === 'fix') {
         patch = true;
+        if (!jsonOutput) console.log(colors.dim + '  → Patch bump (bug fix)' + colors.reset);
+      } else {
+        if (!jsonOutput) console.log(colors.dim + '  → No bump (non-versioning commit)' + colors.reset);
       }
     }
   });
 
+  if (!jsonOutput) {
+    console.log(colors.yellow + '📝 Result:' + colors.reset, colors.dim + 
+      (major ? 'Major bump needed' : 
+       minor ? 'Minor bump needed' : 
+       patch ? 'Patch bump needed' : 
+       'No version bump needed') + colors.reset + '\n');
+  }
+
+  // Return format compatible with tests
   return { major, minor, patch };
 }
 
 function getNextVersion(currentVersion, changes) {
-  if (!changes || !Object.keys(changes).length) return null;
+  // Handle both old and new formats
+  let bumpType = changes;
+  if (typeof changes === 'object') {
+    if (changes.major) bumpType = 'major';
+    else if (changes.minor) bumpType = 'minor';
+    else if (changes.patch) bumpType = 'patch';
+  }
+
+  if (!bumpType) return null;
 
   const [major, minor, patch] = currentVersion.split('.').map(Number);
   
-  if (changes.major) {
+  if (bumpType === 'major' || (typeof changes === 'object' && changes.major)) {
     return `${major + 1}.0.0`;
-  } else if (changes.minor) {
+  } else if (bumpType === 'minor' || (typeof changes === 'object' && changes.minor)) {
     return `${major}.${minor + 1}.0`;
-  } else if (changes.patch) {
+  } else if (bumpType === 'patch' || (typeof changes === 'object' && changes.patch)) {
     return `${major}.${minor}.${patch + 1}`;
   }
   
@@ -132,6 +162,18 @@ export function checkVersions(isCI = false) {
             console.log(colors.magenta + '🔍 Analyzing:' + colors.reset, colors.dim + hash.slice(0, 7) + colors.reset, '-', colors.bright + message + colors.reset);
           }
           
+          // Check if this is a versioning commit (feat, fix, or breaking change)
+          const match = message.match(/^([a-z]+)(?:\(([^)]+)\))?(!)?:/);
+          if (!match) return;
+          
+          const [, type, scope, breaking] = match;
+          if (!['feat', 'fix'].includes(type) && !breaking && !message.includes('BREAKING CHANGE:')) {
+            if (!jsonOutput) {
+              console.log(colors.dim + '  → Skipping non-versioning commit' + colors.reset);
+            }
+            return;
+          }
+
           const reasons = [];
           
           // Get changed files in this commit
@@ -192,7 +234,13 @@ export function checkVersions(isCI = false) {
         const changes = packageChanges.get(pkg.name);
         const currentVersion = getCurrentVersion(pkg.tagPrefix);
         const versionChanges = determineNextVersion(changes);
-        const nextVersion = getNextVersion(currentVersion, versionChanges);
+        let bumpType = null;
+        
+        if (versionChanges.major) bumpType = 'major';
+        else if (versionChanges.minor) bumpType = 'minor';
+        else if (versionChanges.patch) bumpType = 'patch';
+        
+        const nextVersion = getNextVersion(currentVersion, bumpType);
         
         if (nextVersion) {
           versionUpdates.set(pkg.name, {
