@@ -47,8 +47,5 @@
   "bugs": {
     "url": "https://github.com/benjamin-kraatz/get-next-versions/issues"
   },
-  "homepage": "https://github.com/benjamin-kraatz/get-next-versions#readme",
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  }
+  "homepage": "https://github.com/benjamin-kraatz/get-next-versions#readme"
 }
