@@ -1,7 +1,8 @@
 name: 'GetNextVersions'
 description: 'Automated versioning for monorepos based on conventional commits and package dependencies'
-icon: 'arrow-up-circle'
-color: 'purple'
+branding:
+  icon: 'arrow-up-circle'
+  color: 'purple'
 inputs:
   config-path:
     description: 'Path to release-config.json'
