@@ -114,7 +114,7 @@ jobs:
           fetch-depth: 0
       
       - name: Check Version
-        uses: yourusername/get-next-versions@v1
+        uses: benjamin-kraatz/get-next-versions@v1
         id: version_check
         with:
           config-path: './release-config.json'
@@ -189,7 +189,7 @@ The tool relies on git tags to track version history for each package. Here's wh
      ```yaml
      # Example GitHub Action workflow
      - name: Check Version
-       uses: yourusername/get-next-versions@v1
+       uses: benjamin-kraatz/get-next-versions@v1
        id: version_check
      
      - name: Create Tag
