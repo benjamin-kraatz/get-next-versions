@@ -7,11 +7,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load configuration
-const CONFIG_PATH = resolve(__dirname, './release-config.json');
+const CONFIG_PATH = resolve(process.cwd(), 'release-config.json');
 const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
 
 // Check if --json flag is passed
-const jsonOutput = process.argv.includes('--json');
+let jsonOutput = process.argv.includes('--json');
 
 // Add color support
 const colors = {
@@ -268,10 +268,97 @@ export {
   getNextVersion,
   formatCommit,
   printSection,
-  getCommitRange
+  getCommitRange,
+  checkVersions
 };
+
+// Function to check versions
+function checkVersions(isCI = false) {
+  try {
+    // Set json output based on CI environment
+    jsonOutput = isCI;
+    
+    // Process each package's changes and determine version updates
+    config.versionedPackages.forEach(pkg => {
+      if (packageChanges.has(pkg.name)) {
+        const changes = packageChanges.get(pkg.name);
+        const currentVersion = getCurrentVersion(pkg.tagPrefix);
+        const versionChanges = determineNextVersion(changes);
+        const nextVersion = getNextVersion(currentVersion, versionChanges);
+        
+        if (nextVersion) {
+          versionUpdates.set(pkg.name, {
+            tagPrefix: pkg.tagPrefix,
+            currentVersion,
+            nextVersion,
+            changes
+          });
+        }
+      }
+    });
+
+    // Output results
+    if (jsonOutput) {
+      const output = {};
+      
+      config.versionedPackages.forEach(pkg => {
+        output[pkg.name] = {
+          currentVersion: getCurrentVersion(pkg.tagPrefix),
+          nextVersion: versionUpdates.has(pkg.name) ? versionUpdates.get(pkg.name).nextVersion : null,
+          hasChanges: packageChanges.has(pkg.name)
+        };
+      });
+      
+      console.log(JSON.stringify(output));
+    } else {
+      console.log('\n' + colors.bright + colors.magenta + '🚀 Release Check Summary' + colors.reset + '\n');
+      console.log(colors.dim + '=' .repeat(50) + colors.reset + '\n');
+
+      // Changes Overview
+      printSection('📦 Changes Detected:');
+      if (packageChanges.size > 0) {
+        packageChanges.forEach((changes, pkg) => {
+          console.log(`${colors.green}✓${colors.reset} ${pkg}: ${colors.cyan}${changes.size}${colors.reset} commits`);
+        });
+      } else {
+        console.log(`${colors.yellow}⚠ No changes detected${colors.reset}`);
+      }
+
+      // Version Updates
+      printSection('📝 Version Updates:');
+      if (versionUpdates.size > 0) {
+        versionUpdates.forEach(({ tagPrefix, currentVersion, nextVersion }, pkg) => {
+          console.log(`${colors.green}✓${colors.reset} ${pkg}: ${colors.dim}${tagPrefix}${currentVersion}${colors.reset} → ${colors.bright}${tagPrefix}${nextVersion}${colors.reset}`);
+        });
+      } else {
+        console.log(`${colors.yellow}⚠ No version updates needed${colors.reset}`);
+      }
+
+      // Detailed Changes
+      printSection('🔍 Detailed Changes:');
+      if (packageChanges.size > 0) {
+        packageChanges.forEach((changes, pkg) => {
+          console.log(`\n${colors.cyan}${pkg}${colors.reset}:`);
+          changes.forEach(({ hash, message, reasons }) => {
+            console.log(`  ${colors.green}•${colors.reset} ${formatCommit(hash, message)}`);
+            reasons.forEach(reason => {
+              console.log(`    ${colors.dim}↳ ${reason}${colors.reset}`);
+            });
+          });
+        });
+      } else {
+        console.log(`${colors.yellow}⚠ No detailed changes to show${colors.reset}`);
+      }
+
+      console.log('\n' + colors.dim + '=' .repeat(50) + colors.reset + '\n');
+    }
+  } catch (error) {
+    console.error('Error:', error.message);
+    process.exit(1);
+  }
+}
 
 // Main execution
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  // ... (rest of the code remains the same)
+  checkVersions(process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true');
 }
