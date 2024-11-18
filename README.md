@@ -4,6 +4,8 @@
 
 Automated versioning tool based on conventional commits and package dependencies. Available as both an NPM package and a GitHub Action.
 
+> 🔄 **Fun fact**: This package uses itself for versioning! Check out our [release-config](https://github.com/benjamin-kraatz/get-next-versions/blob/main/release-config.json) and [release workflow](https://github.com/benjamin-kraatz/get-next-versions/blob/main/.github/workflows/release.yml) to see how we automate our own version management.
+
 ## Overview
 
 `get-next-versions` is a powerful automated versioning tool designed for both monorepos and single-package repositories. It analyzes your git commit history using conventional commits to automatically determine the next semantic version for your packages. Key features include:
@@ -187,7 +189,7 @@ The tool relies on git tags to track version history for each package. Here's wh
        id: version_check
      
      - name: Create Tag
-       if: fromJSON(steps.version_check.outputs.changes).your-package.has_changes
+       if: ${{ fromJSON(steps.version_check.outputs.changes).your-package.has_changes }}
        run: |
          NEW_VERSION=${{ fromJSON(steps.version_check.outputs.changes).your-package.next_version }}
          git tag "pkg-v${NEW_VERSION}"

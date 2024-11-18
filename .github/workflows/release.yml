@@ -37,7 +37,7 @@ jobs:
           echo "$CHANGES" # For debugging
 
       - name: Update Version
-        if: fromJSON(steps.version_check.outputs.changes)['get-next-versions'].has_changes
+        if: ${{ fromJSON(steps.version_check.outputs.changes)['get-next-versions'].has_changes }}
         id: update_version
         run: |
           NEW_VERSION=${{ fromJSON(steps.version_check.outputs.changes)['get-next-versions'].next_version }}

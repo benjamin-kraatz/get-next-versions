@@ -1,0 +1,9 @@
+{
+  "versionedPackages": [
+    {
+      "name": "get-next-versions",
+      "tagPrefix": "v",
+      "directory": "."
+    }
+  ]
+}
