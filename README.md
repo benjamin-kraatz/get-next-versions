@@ -21,6 +21,28 @@ Automated versioning tool based on conventional commits and package dependencies
 4. Determines appropriate version bumps based on commit types
 5. Outputs human-readable or JSON-formatted version information
 
+### Important Note on Single-Package Repositories
+
+While this tool _could_ be used with single-package repositories, it was primarily designed and tested for monorepo environments. Using it with single-package repositories comes with some trade-offs:
+
+1. **Configuration Overhead**
+   - You still need to maintain a `release-config.json` file
+   - The monorepo-focused configuration might feel unnecessarily complex for a single package
+
+2. **Tag Management**
+   - The tag prefix system, while powerful for monorepos, adds an extra layer of complexity
+   - Standard version tags (e.g., `v1.0.0`) require explicit configuration
+   - Some existing version management tools might be more straightforward for single packages
+
+3. **Feature Underutilization**
+   - The dependency tracking feature becomes redundant
+   - The package-scoped commit parsing might be overly strict for single-package needs
+
+For single-package repositories, you might want to consider alternatives like:
+- `standard-version`
+- `semantic-release`
+- GitHub's built-in release management
+
 ## NPM Package Usage
 
 ### Installation
@@ -127,6 +149,54 @@ The `release-config.json` file is the heart of your versioning configuration. He
   - `["packages/*"]`: Depends on all packages in the packages directory
   - `["packages/ui", "packages/core"]`: Depends on specific packages
   - `["shared/**"]`: Depends on everything in the shared directory
+
+### Git Tags and Version History
+
+The tool relies on git tags to track version history for each package. Here's what you need to know:
+
+1. **Tag Format**
+   - Each package uses its own tag prefix (e.g., `pkg-v1.0.0`, `ui-v2.1.0`)
+   - Tags must follow the format: `{tagPrefix}{version}`
+   - Example: For a package with `tagPrefix: "pkg-v"`, tags should be like:
+     ```bash
+     pkg-v0.1.0
+     pkg-v1.0.0
+     pkg-v1.1.0
+     ```
+
+2. **Version Detection**
+   - The tool checks commit history since the last matching tag for each package
+   - If no tag exists for a package, it starts from version `0.0.0`
+   - Each package's version history is tracked independently
+
+3. **Tag Management**
+   - Tags should be created after each version bump
+   - Can be done manually:
+     ```bash
+     # After confirming version bump to 1.1.0
+     git tag pkg-v1.1.0
+     git push origin pkg-v1.1.0
+     ```
+   - Or automatically in CI (recommended):
+     ```yaml
+     # Example GitHub Action workflow
+     - name: Check Version
+       uses: yourusername/get-next-versions@v1
+       id: version_check
+     
+     - name: Create Tag
+       if: fromJSON(steps.version_check.outputs.changes).your-package.has_changes
+       run: |
+         NEW_VERSION=${{ fromJSON(steps.version_check.outputs.changes).your-package.next_version }}
+         git tag "pkg-v${NEW_VERSION}"
+         git push origin "pkg-v${NEW_VERSION}"
+     ```
+
+4. **Best Practices**
+   - Always use unique tag prefixes for each package
+   - Keep tags synchronized between all environments
+   - In CI, use `fetch-depth: 0` to ensure full git history
+   - Consider automating tag creation to avoid manual errors
 
 ### Version Bump Rules
 
