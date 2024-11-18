@@ -175,6 +175,7 @@ export function checkVersions(isCI = false) {
           }
 
           const reasons = [];
+          let hasRelevantChanges = false;
           
           // Get changed files in this commit
           const changedFiles = execSync(`git diff-tree --no-commit-id --name-only -r ${hash}`).toString().trim();
@@ -184,12 +185,14 @@ export function checkVersions(isCI = false) {
           if (pkg.directory === '.' || changedFilesList.some(file => file.startsWith(pkg.directory))) {
             const dirName = pkg.directory === '.' ? 'root' : pkg.directory;
             reasons.push(`Direct changes in ${dirName}`);
+            hasRelevantChanges = true;
           }
           
           // Check conventional commit scope
           const scopeMatch = message.match(/^[a-z]+\(([^)]+)\)(!)?:/);
           if (scopeMatch && scopeMatch[1] === pkg.name) {
             reasons.push(`Commit scoped to ${pkg.name}`);
+            hasRelevantChanges = true;
           }
 
           // Check dependencies if specified
@@ -205,12 +208,13 @@ export function checkVersions(isCI = false) {
                 // Add details about which specific files in the dependency changed
                 const affectingFiles = matchingChanges.join(', ');
                 reasons.push(`Changes in dependent package ${dep} affect this package: ${affectingFiles}`);
+                hasRelevantChanges = true;
               }
             });
           }
           
           // If we found reasons for this commit affecting the package, add it
-          if (reasons.length > 0) {
+          if (reasons.length > 0 && hasRelevantChanges) {
             changes.add({
               hash,
               message,
