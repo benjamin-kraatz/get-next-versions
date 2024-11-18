@@ -51,6 +51,25 @@ jobs:
           git push
           echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
+
+      - name: Publish to NPM
+        if: steps.update_version.outputs.new_version != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+            npm ci
+            npm test
+            npm publish
+          
+      - name: Publish to GitHub Packages
+        if: steps.update_version.outputs.new_version != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm config set registry https://npm.pkg.github.com
+          npm config set //npm.pkg.github.com/:_authToken $NODE_AUTH_TOKEN
+          npm publish
+  
       - name: Create Release
         if: steps.update_version.outputs.new_version != ''
         env:
@@ -69,23 +88,3 @@ jobs:
             --title "v${NEW_VERSION}" \
             --generate-notes \
             ${PRE_RELEASE}
-
-
-      - name: Publish to NPM
-        if: steps.update_version.outputs.new_version != ''
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npm config set registry https://registry.npmjs.org/
-          npm ci
-          npm test
-          npm publish
-          
-      - name: Publish to GitHub Packages
-        if: steps.update_version.outputs.new_version != ''
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm config set registry https://npm.pkg.github.com
-          npm config set //npm.pkg.github.com/:_authToken $NODE_AUTH_TOKEN
-          npm publish
