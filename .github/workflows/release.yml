@@ -51,7 +51,6 @@ jobs:
           git push
           echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
-
       - name: Publish to NPM
         if: steps.update_version.outputs.new_version != ''
         env:
