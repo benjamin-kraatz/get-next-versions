@@ -181,8 +181,9 @@ export function checkVersions(isCI = false) {
           const changedFilesList = changedFiles.split('\n');
           
           // Check for direct changes in package directory
-          if (changedFilesList.some(file => file.startsWith(pkg.directory))) {
-            reasons.push(`Direct changes in ${pkg.directory}`);
+          if (pkg.directory === '.' || changedFilesList.some(file => file.startsWith(pkg.directory))) {
+            const dirName = pkg.directory === '.' ? 'root' : pkg.directory;
+            reasons.push(`Direct changes in ${dirName}`);
           }
           
           // Check conventional commit scope
@@ -213,6 +214,8 @@ export function checkVersions(isCI = false) {
             changes.add({
               hash,
               message,
+              type,
+              breaking: breaking || message.includes('BREAKING CHANGE:'),
               reasons
             });
           }
@@ -231,7 +234,7 @@ export function checkVersions(isCI = false) {
     // Process each package's changes and determine version updates
     config.versionedPackages.forEach(pkg => {
       if (packageChanges.has(pkg.name)) {
-        const changes = packageChanges.get(pkg.name);
+        const changes = Array.from(packageChanges.get(pkg.name));
         const currentVersion = getCurrentVersion(pkg.tagPrefix);
         const versionChanges = determineNextVersion(changes);
         let bumpType = null;

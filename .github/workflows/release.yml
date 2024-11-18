@@ -79,7 +79,7 @@ jobs:
           npm config set registry https://registry.npmjs.org/
           npm ci
           npm test
-          npm publish --access public
+          npm publish
           
       - name: Publish to GitHub Packages
         if: steps.update_version.outputs.new_version != ''
@@ -88,4 +88,4 @@ jobs:
         run: |
           npm config set registry https://npm.pkg.github.com
           npm config set //npm.pkg.github.com/:_authToken $NODE_AUTH_TOKEN
-          npm publish --access public
+          npm publish
