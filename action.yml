@@ -1,0 +1,15 @@
+name: 'GetNextVersions'
+description: 'Automated versioning for monorepos based on conventional commits and package dependencies'
+inputs:
+  config-path:
+    description: 'Path to release-config.json'
+    required: true
+    default: './release-config.json'
+outputs:
+  has_changes:
+    description: 'Boolean indicating if any package has changes'
+  changes:
+    description: 'JSON string containing all package changes'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
