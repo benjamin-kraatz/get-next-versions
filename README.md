@@ -49,17 +49,19 @@ For single-package repositories, you might want to consider alternatives like:
 - `semantic-release`
 - GitHub's built-in release management
 
-## NPM Package Usage
+## Installation
 
-### Installation
+You can install this package from either NPM or GitHub Packages:
 
 ```bash
-npm install --save-dev get-next-versions
-# or
-yarn add --dev get-next-versions
-# or
-pnpm add -D get-next-versions
+# From NPM
+npm install get-next-versions
+
+# From GitHub Packages
+npm install @benjamin-kraatz/get-next-versions
 ```
+
+## NPM Package Usage
 
 ### Configuration
 
