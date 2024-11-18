@@ -1,6 +1,6 @@
 {
   "name": "get-next-versions",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Automated versioning tool for monorepos based on conventional commits and package dependencies",
   "main": "dist/index.js",
   "type": "module",
