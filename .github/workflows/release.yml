@@ -62,9 +62,14 @@ jobs:
           git push origin "v${NEW_VERSION}"
           
           # Create GitHub Release
+          if [ "${NEW_VERSION%.*}" -lt 1 ]; then
+            PRE_RELEASE="--prerelease"
+          fi
           gh release create "v${NEW_VERSION}" \
             --title "v${NEW_VERSION}" \
-            --generate-notes
+            --generate-notes \
+            ${PRE_RELEASE}
+
 
       - name: Publish to NPM
         if: steps.update_version.outputs.new_version != ''
