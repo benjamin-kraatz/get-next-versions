@@ -152,7 +152,7 @@ export function checkVersions(isCI: boolean = false): void {
       }
 
       // here comes the twist: if the directory is ".", we set the package scope to "".
-      const packageScope = pkg.directory === "." ? "" : pkg.directory;
+      const packageScope = pkg.directory === "." ? "" : pkg.name;
       const packageIsRootScope = packageScope === "";
       const isInScope = checkPackageInScope(commitInfo.scope, packageScope);
       const scope = commitInfo.scope;
