@@ -361,7 +361,7 @@ export function checkVersions(isCI: boolean = false): void {
                 );
               });
               if (matchingChanges.length > 0) {
-                reasons.push(`Changes in dependent package ${dep}`);
+                reasons.push(`Affected by changes in dependent package ${dep}`);
               }
             });
           }

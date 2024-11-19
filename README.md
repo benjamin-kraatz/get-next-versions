@@ -291,7 +291,7 @@ The tool provides two output formats:
       • abc0102 feat(app): add new feature
         ↳ Direct changes in apps/app
       • ghi9012 fix(package-a): fix bug
-        ↳ Changes in dependent package packages/package-a affecting apps/app
+        ↳ Affected by changes in dependent package packages/package-a
     package-a:
       • abc1234 feat(package-a): add new feature
         ↳ Direct changes in packages/package-a
