@@ -9,6 +9,7 @@ import {
   VersionChanges,
   VersionUpdate,
 } from "./types.js";
+import { colors } from "./helpers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,18 +19,6 @@ const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
 let config: Config | undefined;
 
 // Add color support
-const colors = {
-  reset: "\x1b[0m",
-  bright: "\x1b[1m",
-  dim: "\x1b[2m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  white: "\x1b[37m",
-} as const;
 
 function formatCommit(hash: string, message: string): string {
   return `${colors.yellow}${hash.slice(0, 7)}${colors.reset} ${message}`;
