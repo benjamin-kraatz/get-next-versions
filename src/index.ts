@@ -282,14 +282,15 @@ export function checkVersions(isCI: boolean = false): void {
         changes.map((c) => c.message),
       );
       const nextVersion = createVersion(currentVersion, versionChanges);
+      const hasChanges = currentVersion !== nextVersion;
 
-      if (nextVersion) {
+      if (hasChanges) {
         versionUpdates.set(pkg, {
           tagPrefix: pkg.tagPrefix,
           currentVersion,
           nextVersion,
           changes,
-          hasChanges: currentVersion !== nextVersion,
+          hasChanges,
         });
       }
     }
