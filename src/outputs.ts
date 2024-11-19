@@ -12,18 +12,18 @@ import { CLIOptions, CommitInfo, Package, VersionUpdate } from "./types.js";
  * @param versionUpdates - A map where each key is a Package object and each
  * value is a VersionUpdate object containing version information.
  */
-export function output(
+export async function output(
   mode: "json" | "cli",
   data: {
     packageChanges: Map<Package, CommitInfo[]>;
     versionUpdates: Map<Package, VersionUpdate>;
     cliOptions: CLIOptions;
   },
-): void {
+): Promise<void> {
   if (mode === "json") {
     outputJSON(data.versionUpdates);
   } else {
-    outputCLI(data.cliOptions, data.packageChanges, data.versionUpdates);
+    await outputCLI(data.cliOptions, data.packageChanges, data.versionUpdates);
   }
 }
 
@@ -68,11 +68,11 @@ function outputJSON(versionUpdates: Map<Package, VersionUpdate>): void {
  * @param versionUpdates - A map where each key is a Package object and each
  * value is a VersionUpdate object containing version information.
  */
-function outputCLI(
+async function outputCLI(
   cliOptions: CLIOptions,
   packageChanges: Map<Package, CommitInfo[]>,
   versionUpdates: Map<Package, VersionUpdate>,
-): void {
+): Promise<void> {
   const noUpdatesMessage = `${colors.green}${colors.bright} ✓ No version updates required!${colors.reset}`;
   const separator = "\n" + colors.dim + "=".repeat(50) + colors.reset + "\n";
 
@@ -154,5 +154,73 @@ function outputCLI(
     }
 
     console.log(`\n${separator}`);
+  } else {
+    // no auto-create tags.
+    // Ask the user if they want to create tags
+    console.log(
+      `\n${colors.bright}${colors.magenta}🚀 Create tags?${colors.reset}\n${colors.dim}Press Y(es, default), N(o), or C(reate without pushing)${colors.reset}`,
+    );
+    // Y = yes (default), n = no, c = create-only-dont-push
+    const response = await prompt();
+    if (!response) {
+      return;
+    }
+    if (
+      response === "y" ||
+      response === "\r" ||
+      response === "\n" ||
+      response === "c"
+    ) {
+      const isCreateOnly = response === "c";
+      console.log(
+        `\n${colors.bright}${colors.magenta}🚀 Creating and publishing tags${colors.reset}\n`,
+      );
+      for (const [pack, update] of versionUpdates) {
+        const { tagPrefix, nextVersion } = update;
+        const newTag = `${tagPrefix}${nextVersion}`;
+        createTag(newTag, !isCreateOnly);
+        console.log(
+          `${colors.green}✓${colors.reset} ${pack.name}  ${colors.dim}${tagPrefix}${nextVersion}${colors.reset}`,
+        );
+      }
+      console.log(`\n${separator}`);
+    } else {
+      console.log(
+        `\n${colors.dim}${colors.white}⚠ Skipped creating and publishing tags${colors.reset}\n`,
+      );
+    }
   }
+}
+
+function prompt(): Promise<string> {
+  if (process.stdin.isTTY) {
+    // Enable raw mode to get immediate keystrokes
+    process.stdin.setRawMode(true);
+  }
+
+  process.stdin.resume();
+  process.stdin.setEncoding("utf8");
+
+  return new Promise((resolve) => {
+    const onData = (key: string) => {
+      // Ctrl-C
+      if (key === "\u0003") {
+        process.exit();
+      }
+
+      // Clean up
+      process.stdin.removeListener("data", onData);
+      process.stdin.pause();
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+
+      // Add a newline since we're in raw mode
+      process.stdout.write("\n");
+
+      resolve(key.toLowerCase());
+    };
+
+    process.stdin.on("data", onData);
+  });
 }

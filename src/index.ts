@@ -35,7 +35,7 @@ let jsonOutput = false;
 let verboseMode = false;
 let createTags = false;
 
-export function checkVersions(isCI: boolean = false): void {
+export async function checkVersions(isCI: boolean = false): Promise<void> {
   const args = process.argv.slice(2);
   jsonOutput = args.includes("--json");
   verboseMode = args.includes("--verbose");
@@ -292,7 +292,7 @@ export function checkVersions(isCI: boolean = false): void {
     }
   });
 
-  output(jsonOutput ? "json" : "cli", {
+  await output(jsonOutput ? "json" : "cli", {
     packageChanges,
     versionUpdates,
     cliOptions: {
@@ -315,7 +315,8 @@ export {
 
 // Main execution
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  checkVersions(
-    process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true",
-  );
+  checkVersions(process.env.CI === "true").catch((error) => {
+    console.error("Error:", error);
+    process.exit(1);
+  });
 }
