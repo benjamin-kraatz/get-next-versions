@@ -96,9 +96,10 @@ export function getTagInfos(tag: string):
  * @returns The commit range to analyze, either a specific range or just HEAD.
  */
 export function getCommitRange(prefix: string, limit?: number): string {
+  const limitUse = limit && limit > 0 && limit < 1_000 ? limit : undefined;
   const lastTag = getLastTag(prefix);
   const until = lastTag ? `${lastTag}..HEAD` : "HEAD";
-  return until + (limit ? `~${limit}` : "");
+  return until + (limitUse ? `~${limitUse}` : "");
 }
 
 /**
