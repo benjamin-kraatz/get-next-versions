@@ -1,185 +1,58 @@
-import { execSync } from "child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-type NonScopeBehavior = "bump" | "ignore";
-
-interface Config {
-  versionedPackages: Package[];
-  /**
-   * Determines the behavior when a commit message does not contain a scope.
-   * It defaults to "bump", which means the commit will be treated as a version bump,
-   * if it contains one of the conventional commit types.
-   *
-   * "ignore" will not treat this commit as a version bump for a package
-   * that is not in the scope.
-   * @default "bump"
-   */
-  nonScopeBehavior?: NonScopeBehavior;
-}
-
-interface Package {
-  name: string;
-  tagPrefix: string;
-  directory: string;
-  dependsOn: string[];
-}
-
-interface VersionChanges {
-  major: boolean;
-  minor: boolean;
-  patch: boolean;
-}
-
-interface VersionUpdate {
-  tagPrefix: string;
-  currentVersion: string;
-  nextVersion: string;
-  hasChanges: boolean;
-  changes: CommitInfo[];
-}
-
-interface CommitInfo {
-  hash: string;
-  message: string;
-  type: string;
-  breaking: boolean;
-  reasons: string[];
-}
+import {
+  formatCommit,
+  getChangedFilesInCommit,
+  getCommitRange,
+  getCommitsForTag,
+  getLastTag,
+  parseCommitInfo,
+} from "./commits.js";
+import { loadConfig } from "./config.js";
+import { checkPackageInScope, colors, printSection } from "./helpers.js";
+import {
+  CommitInfo,
+  CommitMessage,
+  Config,
+  Package,
+  VersionUpdate,
+} from "./types.js";
+import {
+  createVersion,
+  determineVersionChange,
+  getCurrentVersion,
+  isCommitAnyRelevantConvention,
+} from "./versions.js";
 
 // Load configuration
 const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
 let config: Config | undefined;
 
-// Add color support
-const colors = {
-  reset: "\x1b[0m",
-  bright: "\x1b[1m",
-  dim: "\x1b[2m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  white: "\x1b[37m",
-} as const;
-
-function formatCommit(hash: string, message: string): string {
-  return `${colors.yellow}${hash.slice(0, 7)}${colors.reset} ${message}`;
-}
-
-function printSection(title: string, content: string = ""): void {
-  console.log(`\n${colors.bright}${colors.blue}${title}${colors.reset}`);
-  if (content) {
-    console.log(content);
-  }
-}
-
-function getLastTag(prefix: string): string {
-  try {
-    // For root packages with just 'v', we need to be more careful about the match pattern
-    const matchPattern = prefix === "v" ? "v[0-9]*" : `${prefix}*`;
-    // Redirect stderr to /dev/null to suppress "fatal: No names found" message
-    return execSync(
-      `git describe --tags --match "${matchPattern}" --abbrev=0 2>/dev/null`,
-    )
-      .toString()
-      .trim();
-  } catch {
-    return "";
-  }
-}
-
-function getCommitRange(prefix: string): string {
-  const lastTag = getLastTag(prefix);
-  return lastTag ? `${lastTag}..HEAD` : "HEAD";
-}
-
-function getCurrentVersion(prefix: string): string {
-  const lastTag = getLastTag(prefix);
-  if (!lastTag) return "0.0.0";
-  return lastTag.replace(prefix, "");
-}
-
-function determineVersionChange(commits: string[]): VersionChanges {
-  const changes: VersionChanges = {
-    major: false,
-    minor: false,
-    patch: false,
-  };
-
-  for (const commit of commits) {
-    const message = commit.toLowerCase();
-    if (
-      message.startsWith("breaking") ||
-      message.includes("breaking change") ||
-      message.includes("breaking-change")
-    ) {
-      changes.major = true;
-    } else if (message.startsWith("feat")) {
-      changes.minor = true;
-    } else if (message.startsWith("fix")) {
-      changes.patch = true;
-    }
-  }
-
-  return changes;
-}
-
-function getNextVersion(
-  currentVersion: string,
-  changes: VersionChanges,
-): string {
-  const [major, minor, patch] = currentVersion.split(".").map(Number);
-
-  if (changes.major) {
-    return `${major + 1}.0.0`;
-  }
-
-  if (changes.minor) {
-    return `${major}.${minor + 1}.0`;
-  }
-
-  if (changes.patch) {
-    return `${major}.${minor}.${patch + 1}`;
-  }
-
-  return currentVersion;
-}
-
-function checkPackageInScope(scope: string, pkgName: string): boolean {
-  return pkgName.trim() === scope.trim();
-}
-
 // Initialize maps to store changes and version updates
 const packageChanges = new Map<Package, CommitInfo[]>();
 const versionUpdates = new Map<Package, VersionUpdate>();
 let jsonOutput = false;
+let verboseMode = false;
 
-// Function to check versions
 export function checkVersions(isCI: boolean = false): void {
   const args = process.argv.slice(2);
   jsonOutput = args.includes("--json");
+  verboseMode = args.includes("--verbose");
 
   packageChanges.clear();
   versionUpdates.clear();
 
-  const configFile = existsSync(CONFIG_PATH)
-    ? CONFIG_PATH
-    : resolve(__dirname, "../release-config.json");
   try {
-    config = JSON.parse(readFileSync(configFile, "utf8")) as Config;
+    const configPath = CONFIG_PATH || args[0];
+    config = loadConfig(configPath);
+    if (!config) {
+      throw new Error("Failed to parse config file.");
+    }
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     if (isCI) {
       console.error(`Error parsing config file: ${errMsg}`);
       process.exit(1);
-      return;
     }
     console.error(
       `${colors.red}⛔️ ${colors.bright}Error: Failed to parse config file.\nCheck out https://github.com/benjamin-kraatz/get-next-versions?tab=readme-ov-file#configuration for more details:\n${colors.reset}\n${colors.red}${errMsg}${colors.reset}`,
@@ -197,226 +70,200 @@ export function checkVersions(isCI: boolean = false): void {
     process.exit(1);
   }
 
-  // Process each package
-  for (const versionedPackage of config.versionedPackages) {
-    const packagePrefix = versionedPackage.tagPrefix;
-    const prefix = packagePrefix || "v";
-    if (!jsonOutput && !packagePrefix) {
+  // get all commits up to the last tag for each package.
+  // If there is no tag, start from the root commit for each package.
+  let commitMessages: CommitMessage[] = [];
+  if (!jsonOutput) {
+    console.log(
+      `${colors.green}✅ ${colors.bright}Found ${config.versionedPackages.length} packages in config file.${colors.reset}`,
+    );
+  }
+
+  for (const pkg of config.versionedPackages) {
+    const prefix = pkg.tagPrefix || "v";
+    if (!jsonOutput && !pkg.tagPrefix) {
       console.warn(
-        `${colors.yellow}⚠️ Warning:${colors.reset} No tag prefix found for package "${versionedPackage.name}", using '${versionedPackage.name}-v' as default.`,
+        `${colors.yellow}⚠️ Warning:${colors.reset} No tag prefix found for package "${pkg.name}", using '${prefix}' as default.`,
+      );
+    }
+    const lastTag = getLastTag(prefix);
+    const version = lastTag?.replaceAll(prefix, "") || "0.0.0";
+
+    if (!jsonOutput) {
+      console.log(
+        "\n" + colors.cyan + "📦 Package:" + colors.reset,
+        colors.bright +
+          pkg.name +
+          ` ${colors.reset}${colors.dim}(${version})` +
+          colors.reset,
       );
     }
 
-    try {
-      const commitRange = getCommitRange(`${prefix}`);
-      const commitsRaw = execSync(`git log ${commitRange} --format="%H %s"`)
-        .toString()
-        .trim()
-        .split("\n")
-        .filter(Boolean);
+    const commits = getCommitsForTag(lastTag || "HEAD");
+    commitMessages.push(...commits);
 
-      const commits = commitsRaw
-        .map((line) => {
-          const [hash, ...messageParts] = line.split(" ");
-          return { hash, message: messageParts.join(" ") };
-        })
-        .filter((c) => c.hash && c.message);
+    // clean up commit messages to remove duplicates.
+    // we do it here instead of after the loop to prevent memory overusage.
+    commitMessages = commitMessages.filter(
+      (commit, index) => commitMessages.indexOf(commit) === index,
+    );
 
-      if (!jsonOutput) {
+    // filter the commits to only include those that affect the current package.
+    const commitsForPackage: CommitInfo[] = [];
+    for (const commit of commits) {
+      if (!jsonOutput && verboseMode) {
         console.log(
-          "\n" + colors.cyan + "📦 Package:" + colors.reset,
-          colors.bright + versionedPackage.name + colors.reset,
-        );
-        console.log(
-          colors.dim +
-            `Found ${commits.length} commits since ${prefix}` +
-            colors.reset +
-            "\n",
+          `${colors.magenta}🔍 Analyzing:${colors.reset}`,
+          colors.dim + commit.hash.slice(0, 7) + colors.reset,
+          "-",
+          colors.bright + commit.message + colors.reset,
         );
       }
 
-      const changes = new Set<CommitInfo>();
-      for (const commit of commits) {
-        const hashSubstring = commit.hash.slice(0, 7);
-        const message = commit.message.toLowerCase();
-        if (!jsonOutput) {
-          console.log(
-            `${colors.magenta}🔍 Analyzing:${colors.reset}`,
-            colors.dim + hashSubstring + colors.reset,
-            "-",
-            colors.bright + message + colors.reset,
-          );
-        }
+      const commitInfo = parseCommitInfo(commit.message);
+      if (!commitInfo) {
+        continue;
+      }
 
-        // Check if this is a versioning commit (feat, fix, or breaking change)
-        const match = message.match(/^([a-z]+)(?:\(([^)]+)\))?(!)?:/);
-        if (!match) {
-          continue;
-        }
+      const relevance = isCommitAnyRelevantConvention(commit.message);
+      if (!relevance.isRelevant) {
+        // this isn't a relevant commit at all.
+        continue;
+      }
 
-        const [, type, scopeMatch, breakingMatch] = match;
-        const scope = scopeMatch || "";
-        const breaking =
-          !!breakingMatch || message.includes("BREAKING CHANGE:");
-
-        // check the scope. If it's not the same as the package,
-        // skip it, if "nonScopeBehavior" is "ignore".
-        // Note that the scope can be empty, we should consider that as well.
-        const isScopePackage = checkPackageInScope(
-          scope,
-          versionedPackage.name,
-        );
-        const isNonScopedPackage = scope === "";
-        const ignoreNonScope = config.nonScopeBehavior === "ignore";
-        if (isNonScopedPackage && ignoreNonScope) {
-          if (!jsonOutput) {
-            console.log(
-              colors.dim +
-                "  → Skipping commit from non-scoped root package" +
-                colors.reset,
-            );
-          }
-          continue;
-        }
-
-        if (!isScopePackage && !(isNonScopedPackage && !ignoreNonScope)) {
-          // the commit does not belong to this package.
-          // Skip adding it to the changes list.
-          // BUT: our power is to check
-          // - if any dependencies are affected
-          // - and if so, and the package is affected by the dependency changes,
-          //   then we should add this commit to the changes list.
-          if (!jsonOutput) {
-            const isFrom = scope || "root";
-            console.log(
-              colors.dim +
-                "  → Skipping commit from non-scoped package " +
-                isFrom +
-                colors.reset,
-            );
-          }
-          continue;
-        }
-
-        // Consider all feat, fix, and breaking changes
-        const isVersioningCommit =
-          type === "feat" || type === "fix" || breaking;
-        if (!isVersioningCommit) {
-          if (!jsonOutput) {
-            console.log(
-              colors.dim + "  → Skipping non-versioning commit" + colors.reset,
-            );
-          }
-          continue;
-        }
-
-        // Add the commit regardless of file changes for version determination
-        changes.add({
+      const addToList = (reason: string) => {
+        commitsForPackage.push({
           hash: commit.hash,
-          message,
-          type,
-          breaking,
-          reasons: ["Versioning commit detected"],
+          message: commit.message,
+          type: relevance.type ?? commitInfo.type,
+          breaking: relevance.type === "major" || commitInfo.breaking,
+          reasons: [reason],
         });
-        if (!jsonOutput) {
-          console.log(
-            colors.dim + "  → Adding commit to changes list" + colors.reset,
-          );
-        }
+      };
 
-        // Get changed files in this commit for informational purposes
-        const changedFiles = execSync(
-          `git diff-tree --no-commit-id --name-only -r ${commit.hash}`,
-        )
-          .toString()
-          .trim();
-        const changedFilesList = changedFiles.split("\n");
-        if (!jsonOutput) {
+      // if the commit is a breaking change, we can completely skip the loop.
+      // A breaking change always bumps to the highest version possible,
+      // so no other version checks necessary.
+      if (
+        relevance.type === "major" ||
+        commitInfo.breaking ||
+        commitInfo.type === "major"
+      ) {
+        if (!jsonOutput && verboseMode) {
+          console.log(colors.dim + "  → Major version bump" + colors.reset);
+        }
+        addToList("Major version bump");
+        break;
+      }
+
+      // here comes the twist: if the directory is ".", we set the package scope to "".
+      const packageScope = pkg.directory === "." ? "" : pkg.name;
+      const packageIsRootScope = packageScope === "";
+      const isInScope = checkPackageInScope(commitInfo.scope, packageScope);
+      const scope = commitInfo.scope;
+      const isRootScope = scope === "";
+      if (!isInScope && !isRootScope) {
+        // that's a scope that we don't care about, so we can skip it.
+        // But we want to include the `dependsOn` checks and commits as well.
+        // Check dependencies
+        const changedFilesList = getChangedFilesInCommit(commit.hash);
+        if (!jsonOutput && verboseMode) {
           const changedFilesCount = changedFilesList.length;
           console.log(
             colors.dim + `  Changed files: ${changedFilesCount}` + colors.reset,
           );
         }
 
-        // Add additional reasons for commit
-        const reasons: string[] = [];
-        if (!versionedPackage.directory || versionedPackage.directory === ".") {
-          reasons.push("Root package - considering all changes");
-        } else {
-          // For non-root packages, check if files are in the package directory
-          if (
-            changedFilesList.some((file) => {
+        // For non-root packages, check if files are in the package directory
+        if (
+          changedFilesList.some((file) => {
+            const normalizedFile = file.replace(/\\/g, "/");
+            const normalizedDir = pkg.directory.replace(/\\/g, "/");
+            // For root directory ('.'), any file is considered a match
+            return normalizedDir === "."
+              ? true
+              : normalizedFile.startsWith(normalizedDir + "/") ||
+                  normalizedFile === normalizedDir;
+          })
+        ) {
+          addToList(`Direct changes in ${pkg.directory}`);
+          if (!jsonOutput && verboseMode) {
+            console.log(
+              colors.dim +
+                "  → Direct changes in package directory" +
+                colors.reset,
+            );
+          }
+        }
+
+        if (pkg.dependsOn) {
+          pkg.dependsOn.forEach((dep) => {
+            const depPattern = dep.replace("*", "");
+            const matchingChanges = changedFilesList.filter((file) => {
               const normalizedFile = file.replace(/\\/g, "/");
-              const normalizedDir = versionedPackage.directory.replace(
-                /\\/g,
-                "/",
+              const normalizedPattern = depPattern.replace(/\\/g, "/");
+              return (
+                normalizedFile.startsWith(normalizedPattern + "/") ||
+                normalizedFile === normalizedPattern
               );
-              // For root directory ('.'), any file is considered a match
-              return normalizedDir === "."
-                ? true
-                : normalizedFile.startsWith(normalizedDir + "/") ||
-                    normalizedFile === normalizedDir;
-            })
-          ) {
-            reasons.push(`Direct changes in ${versionedPackage.directory}`);
-          }
-
-          // Check if commit is scoped to this package
-          if (scope === versionedPackage.name) {
-            reasons.push(`Commit scoped to ${versionedPackage.name}`);
-          }
-
-          // Check dependencies
-          if (versionedPackage.dependsOn) {
-            versionedPackage.dependsOn.forEach((dep) => {
-              const depPattern = dep.replace("*", "");
-              const matchingChanges = changedFilesList.filter((file) => {
-                const normalizedFile = file.replace(/\\/g, "/");
-                const normalizedPattern = depPattern.replace(/\\/g, "/");
-                return (
-                  normalizedFile.startsWith(normalizedPattern + "/") ||
-                  normalizedFile === normalizedPattern
-                );
-              });
-              if (matchingChanges.length > 0) {
-                reasons.push(`Affected by changes in dependent package ${dep}`);
-              }
             });
-          }
+            if (matchingChanges.length > 0) {
+              addToList(`Affected by changes in dependent package ${dep}`);
+              if (!jsonOutput && verboseMode) {
+                console.log(
+                  colors.dim +
+                    "  → Affected by changes in dependent package" +
+                    colors.reset,
+                );
+              }
+            }
+          });
         }
-
-        if (reasons.length > 0) {
-          // Convert the Set to an array to get the last item
-          const changesArray = Array.from(changes);
-          if (changesArray.length > 0) {
-            changesArray[changesArray.length - 1].reasons.push(...reasons);
-          }
-        }
+        continue;
       }
-
-      const changesArray = Array.from(changes);
-      if (changesArray.length === 0) {
-        if (!jsonOutput) {
+      if (isInScope && !isRootScope) {
+        // it is the package itself.
+        addToList("Changes in package scope");
+        if (!jsonOutput && verboseMode) {
           console.log(
-            colors.dim +
-              `No versioning commits found since ${prefix}` +
-              colors.reset +
-              "\n",
+            colors.dim + "  → Changes in package scope" + colors.reset,
           );
         }
         continue;
       }
-      if (changes.size > 0) {
-        packageChanges.set(versionedPackage, changesArray);
-      }
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : "Unknown error";
-      if (!jsonOutput) {
-        console.error(
-          `${colors.red}⛔️ ${colors.bright}Error: Failed to analyze commits for package "${versionedPackage.name}".${colors.reset}\n${colors.red}${errMsg}${colors.reset}`,
+
+      // check if the scope of the commit is root, and if so,
+      // only include the commit if the nonScopeBehavior is "bump".
+      const bumpRootScope =
+        packageIsRootScope || config!.nonScopeBehavior === "bump";
+      if (isRootScope && bumpRootScope) {
+        if (!jsonOutput && verboseMode) {
+          console.log(
+            colors.dim +
+              `  → Changes in ${packageIsRootScope ? "scope" : "root (nonScopeBehavior is set to 'bump')"}` +
+              colors.reset,
+          );
+        }
+
+        addToList(
+          packageIsRootScope
+            ? "Changes in scope"
+            : "Changes in root (nonScopeBehavior is set to 'bump')",
         );
+        continue;
       }
-      if (isCI) process.exit(1);
+    }
+
+    packageChanges.set(pkg, commitsForPackage);
+
+    if (!jsonOutput) {
+      const countCommitsPerPackage = packageChanges.get(pkg)?.length ?? 0;
+      console.log(
+        colors.dim +
+          `   Found ${countCommitsPerPackage} relevant commits${lastTag ? ` since ${lastTag}` : ""}` +
+          colors.reset +
+          "\n",
+      );
     }
   }
 
@@ -434,7 +281,7 @@ export function checkVersions(isCI: boolean = false): void {
       const versionChanges = determineVersionChange(
         changes.map((c) => c.message),
       );
-      const nextVersion = getNextVersion(currentVersion, versionChanges);
+      const nextVersion = createVersion(currentVersion, versionChanges);
 
       if (nextVersion) {
         versionUpdates.set(pkg, {
@@ -545,11 +392,11 @@ export function checkVersions(isCI: boolean = false): void {
 
 // Export functions for testing
 export {
+  createVersion,
   determineVersionChange as determineNextVersion,
   getCommitRange,
   getCurrentVersion,
   getLastTag,
-  getNextVersion,
 };
 
 // Main execution

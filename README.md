@@ -98,7 +98,7 @@ Create a `release-config.json` file in your repository root. You can find the [f
 }
 
 # Run version check (human-readable output)
-npm run version-check
+npm run version-check # pass --verbose to see more details
 
 # Run version check (JSON output)
 npm run version-check --json
@@ -174,6 +174,7 @@ The `release-config.json` file is the heart of your versioning configuration. He
   - Support monorepo structures with multiple packages
 
 - `dependsOn` (optional): An array of glob patterns indicating which other packages or directories this package depends on. When changes are detected in dependent packages, the current package will also receive a version bump. Examples:
+
   - `["packages/*"]`: Depends on all packages in the packages directory
   - `["packages/ui", "packages/core"]`: Depends on specific packages
   - `["shared/**"]`: Depends on everything in the shared directory
