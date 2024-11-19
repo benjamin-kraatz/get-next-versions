@@ -25,7 +25,7 @@
     "format:fix": "npx prettier --write .",
     "start": "npm run build && node ./bin/get-next-versions.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "prerun": "npm run format:fix && npm run lint",
+    "qa": "npm run format:fix && npm run lint && tsc --noEmit && npm run test",
     "prepare": "npm run clean && npm run build"
   },
   "keywords": [
