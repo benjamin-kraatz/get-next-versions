@@ -136,6 +136,14 @@ export function parseCommitInfo(message: string):
   };
 }
 
+export function getChangedFilesInCommit(commitHash: string): string[] {
+  return (
+    runCommand(
+      `git diff-tree --no-commit-id --name-only -r ${commitHash}`,
+    )?.split("\n") ?? []
+  );
+}
+
 /**
  * Retrieves a list of commits within a given range.
  *

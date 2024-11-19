@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   formatCommit,
+  getChangedFilesInCommit,
   getCommitRange,
   getCommitsForTag,
   getLastTag,
@@ -163,7 +164,61 @@ export function checkVersions(isCI: boolean = false): void {
       const isRootScope = scope === "";
       if (!isInScope && !isRootScope) {
         // that's a scope that we don't care about, so we can skip it.
-        // We might want to change this, as it could be a dependsOn commit.
+        // But we want to include the `dependsOn` checks and commits as well.
+        // Check dependencies
+        const changedFilesList = getChangedFilesInCommit(commit.hash);
+        if (!jsonOutput && verboseMode) {
+          const changedFilesCount = changedFilesList.length;
+          console.log(
+            colors.dim + `  Changed files: ${changedFilesCount}` + colors.reset,
+          );
+        }
+
+        // For non-root packages, check if files are in the package directory
+        if (
+          changedFilesList.some((file) => {
+            const normalizedFile = file.replace(/\\/g, "/");
+            const normalizedDir = pkg.directory.replace(/\\/g, "/");
+            // For root directory ('.'), any file is considered a match
+            return normalizedDir === "."
+              ? true
+              : normalizedFile.startsWith(normalizedDir + "/") ||
+                  normalizedFile === normalizedDir;
+          })
+        ) {
+          addToList(`Direct changes in ${pkg.directory}`);
+          if (!jsonOutput && verboseMode) {
+            console.log(
+              colors.dim +
+                "  → Direct changes in package directory" +
+                colors.reset,
+            );
+          }
+        }
+
+        if (pkg.dependsOn) {
+          pkg.dependsOn.forEach((dep) => {
+            const depPattern = dep.replace("*", "");
+            const matchingChanges = changedFilesList.filter((file) => {
+              const normalizedFile = file.replace(/\\/g, "/");
+              const normalizedPattern = depPattern.replace(/\\/g, "/");
+              return (
+                normalizedFile.startsWith(normalizedPattern + "/") ||
+                normalizedFile === normalizedPattern
+              );
+            });
+            if (matchingChanges.length > 0) {
+              addToList(`Affected by changes in dependent package ${dep}`);
+              if (!jsonOutput && verboseMode) {
+                console.log(
+                  colors.dim +
+                    "  → Affected by changes in dependent package" +
+                    colors.reset,
+                );
+              }
+            }
+          });
+        }
         continue;
       }
       if (isInScope && !isRootScope) {
@@ -195,11 +250,8 @@ export function checkVersions(isCI: boolean = false): void {
             ? "Changes in scope"
             : "Changes in root (nonScopeBehavior is set to 'bump')",
         );
+        continue;
       }
-
-      // at this point, the commit is not relevant to the current package.
-      // But we want to include the `dependsOn` checks and commits as well.
-      //
     }
 
     packageChanges.set(pkg, commitsForPackage);
