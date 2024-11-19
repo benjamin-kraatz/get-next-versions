@@ -123,7 +123,7 @@ The following command-line flags are available to customize the behavior of `get
 | `--publish` | Automatically create and push git tags when new versions are detected. This eliminates the need for manual tag creation and pushing |
 
 When `--publish` is not used, the CLI will enter an interactive mode after detecting version changes, asking whether to:
-- Create and publish tags (Y)
+- Create and publish tags (Y) - this is the default
 - Skip tag creation (N)
 - Create tags without publishing (C)
 
