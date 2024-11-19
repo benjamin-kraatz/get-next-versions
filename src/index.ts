@@ -90,7 +90,7 @@ function getLastTag(prefix: string): string {
     )
       .toString()
       .trim();
-  } catch (error) {
+  } catch {
     return "";
   }
 }
