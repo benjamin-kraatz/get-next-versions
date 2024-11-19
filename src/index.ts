@@ -67,20 +67,23 @@ export function checkVersions(isCI: boolean = false): void {
     console.log(
       `${colors.green}✅ ${colors.bright}Found ${config.versionedPackages.length} packages in config file.${colors.reset}`,
     );
-    for (const pkg of config.versionedPackages) {
-      const lastTag = getLastTag(pkg.tagPrefix);
-      const version = lastTag?.replaceAll(pkg.tagPrefix, "") || "0.0.0";
+  }
+
+  for (const pkg of config.versionedPackages) {
+    const lastTag = getLastTag(pkg.tagPrefix);
+    const version = lastTag?.replaceAll(pkg.tagPrefix, "") || "0.0.0";
+    if (!jsonOutput) {
       console.log(
         `${colors.green}   ${colors.dim}↦ ${pkg.name}: ${version}${colors.reset}`,
       );
-
-      const commits = getCommitsForTag(lastTag || "HEAD");
-      commitMessages.push(...commits);
-
-      // clean up commit messages to remove duplicates.
-      // we do it here to prevent memory overusage.
-      commitMessages = Array.from(new Set(commitMessages));
     }
+
+    const commits = getCommitsForTag(lastTag || "HEAD");
+    commitMessages.push(...commits);
+
+    // clean up commit messages to remove duplicates.
+    // we do it here to prevent memory overusage.
+    commitMessages = Array.from(new Set(commitMessages));
   }
 
   console.log(
