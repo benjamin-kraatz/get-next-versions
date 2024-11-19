@@ -32,10 +32,12 @@ Automated versioning tool based on conventional commits and package dependencies
 While this tool _could_ be used with single-package repositories, it was primarily designed and tested for monorepo environments. Using it with single-package repositories comes with some trade-offs:
 
 1. **Configuration Overhead**
+
    - You still need to maintain a `release-config.json` file
    - The monorepo-focused configuration might feel unnecessarily complex for a single package
 
 2. **Tag Management**
+
    - The tag prefix system, while powerful for monorepos, adds an extra layer of complexity
    - Standard version tags (e.g., `v1.0.0`) require explicit configuration
    - Some existing version management tools might be more straightforward for single packages
@@ -45,20 +47,18 @@ While this tool _could_ be used with single-package repositories, it was primari
    - The package-scoped commit parsing might be overly strict for single-package needs
 
 For single-package repositories, you might want to consider alternatives like:
+
 - `standard-version`
 - `semantic-release`
 - GitHub's built-in release management
 
 ## Installation
 
-You can install this package from either NPM or GitHub Packages:
+You can install this package from NPM:
 
 ```bash
 # From NPM
-npm install get-next-versions
-
-# From GitHub Packages
-npm install @benjamin-kraatz/get-next-versions
+npm install --save-dev get-next-versions
 ```
 
 ## NPM Package Usage
@@ -92,6 +92,12 @@ Create a `release-config.json` file in your repository root:
 
 # Run version check (human-readable output)
 npm run version-check
+
+# Recommended: when there are changes and new versions are detected,
+# add the new tags to your repository
+# For example: pkg-v1.1.0 was detected
+git tag "pkg-v1.1.0"
+git push origin "pkg-v1.1.0" # or git push --tags
 ```
 
 The tool automatically detects if it's running in a CI environment (GitHub Actions, Jenkins, etc.) and will output JSON format when appropriate.
@@ -103,7 +109,7 @@ name: Version Check
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   check-version:
@@ -112,17 +118,19 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      
+
       - name: Check Version
         uses: benjamin-kraatz/get-next-versions@v1
         id: version_check
         with:
-          config-path: './release-config.json'
-      
+          config-path: "./release-config.json"
+
       - name: Use Version Info
         if: ${{ fromJSON(steps.version_check.outputs.changes).your-package.has_changes }}
         run: |
           echo "New version: ${{ fromJSON(steps.version_check.outputs.changes).your-package.next_version }}"
+          # ... other actions ...
+          # we recommend adding tags here
 ```
 
 ## Configuration Options
@@ -149,6 +157,7 @@ The `release-config.json` file is the heart of your versioning configuration. He
 - `tagPrefix` (required): The prefix used for git version tags. For example, with prefix `pkg-v`, tags will look like `pkg-v1.0.0`. This allows different packages to maintain independent version histories.
 
 - `directory` (required): The location of your package in the repository. This is used to:
+
   - Track direct changes to package files
   - Determine when changes affect this package
   - Support monorepo structures with multiple packages
@@ -163,6 +172,7 @@ The `release-config.json` file is the heart of your versioning configuration. He
 The tool relies on git tags to track version history for each package. Here's what you need to know:
 
 1. **Tag Format**
+
    - Each package uses its own tag prefix (e.g., `pkg-v1.0.0`, `ui-v2.1.0`)
    - Tags must follow the format: `{tagPrefix}{version}`
    - Example: For a package with `tagPrefix: "pkg-v"`, tags should be like:
@@ -173,11 +183,13 @@ The tool relies on git tags to track version history for each package. Here's wh
      ```
 
 2. **Version Detection**
+
    - The tool checks commit history since the last matching tag for each package
    - If no tag exists for a package, it starts from version `0.0.0`
    - Each package's version history is tracked independently
 
 3. **Tag Management**
+
    - Tags should be created after each version bump
    - Can be done manually:
      ```bash
@@ -186,12 +198,13 @@ The tool relies on git tags to track version history for each package. Here's wh
      git push origin pkg-v1.1.0
      ```
    - Or automatically in CI (recommended):
+
      ```yaml
      # Example GitHub Action workflow
      - name: Check Version
        uses: benjamin-kraatz/get-next-versions@v1
        id: version_check
-     
+
      - name: Create Tag
        if: ${{ fromJSON(steps.version_check.outputs.changes).your-package.has_changes }}
        run: |
@@ -212,8 +225,10 @@ The tool follows semantic versioning (MAJOR.MINOR.PATCH) rules based on conventi
 
 1. **Major Version** (1.0.0 → 2.0.0)
    Breaking changes are detected from:
+
    - Commits with a breaking change marker: `feat(pkg)!: message`
-   - Commits with a BREAKING CHANGE footer: 
+   - Commits with a BREAKING CHANGE footer:
+
      ```
      feat(pkg): message
 
@@ -222,6 +237,7 @@ The tool follows semantic versioning (MAJOR.MINOR.PATCH) rules based on conventi
 
 2. **Minor Version** (1.0.0 → 1.1.0)
    New features are detected from:
+
    - Feature commits: `feat(pkg): message`
    - New functionality that doesn't break existing code
 
@@ -242,6 +258,7 @@ The tool follows semantic versioning (MAJOR.MINOR.PATCH) rules based on conventi
 The tool provides two output formats:
 
 1. **Human-Readable Output** (default in non-CI environments):
+
    ```
    🚀 Release Check Summary
    ==================================================
@@ -274,16 +291,19 @@ The tool provides two output formats:
 ## Best Practices
 
 1. **Commit Messages**
+
    - Always use conventional commit format: `type(scope): message`
    - Include package name in the scope
    - Use clear and descriptive messages
 
 2. **Configuration**
+
    - Keep `release-config.json` in your repository root
    - Use specific `dependsOn` patterns to avoid unnecessary version bumps
    - Choose clear and consistent `tagPrefix` values
 
 3. **Monorepo Usage**
+
    - Configure each package separately in `versionedPackages`
    - Use `dependsOn` to manage package relationships
    - Maintain independent version histories with unique `tagPrefix`
@@ -298,11 +318,13 @@ The tool provides two output formats:
 Common issues and solutions:
 
 1. **No Version Changes Detected**
+
    - Verify your commit messages follow conventional commit format
    - Check if changes are in the correct package directory
    - Ensure your git history is complete (use `fetch-depth: 0` in CI)
 
 2. **Unexpected Version Bumps**
+
    - Review `dependsOn` patterns for over-broad matches
    - Check commit messages for correct package scopes
    - Verify breaking change syntax in commits
@@ -319,6 +341,9 @@ Common issues and solutions:
 npm install
 
 # Run tests
+# NOTE: currently we have not migrated Jest to TypeScript.
+# Therefore, a build step is required before running tests.
+# It is included in the `test` script.
 npm test
 
 # Build

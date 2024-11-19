@@ -1,18 +1,18 @@
-name: 'GetNextVersions'
-description: 'Automated versioning for monorepos based on conventional commits and package dependencies'
+name: "GetNextVersions"
+description: "Automated versioning for monorepos based on conventional commits and package dependencies"
 branding:
-  icon: 'arrow-up-circle'
-  color: 'purple'
+  icon: "arrow-up-circle"
+  color: "purple"
 inputs:
   config-path:
-    description: 'Path to release-config.json'
+    description: "Path to release-config.json"
     required: true
-    default: './release-config.json'
+    default: "./release-config.json"
 outputs:
   has_changes:
-    description: 'Boolean indicating if any package has changes'
+    description: "Boolean indicating if any package has changes"
   changes:
-    description: 'JSON string containing all package changes'
+    description: "JSON string containing all package changes"
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: "node20"
+  main: "dist/index.js"
