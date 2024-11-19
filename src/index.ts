@@ -1,8 +1,8 @@
 import { execSync } from "child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatCommit, getCommitRange, getLastTag } from "./commits.js";
+import { loadConfig } from "./config.js";
 import { checkPackageInScope, colors, printSection } from "./helpers.js";
 import { CommitInfo, Config, Package, VersionUpdate } from "./types.js";
 import {
@@ -10,9 +10,6 @@ import {
   determineVersionChange,
   getCurrentVersion,
 } from "./versions.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Load configuration
 const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
@@ -23,7 +20,6 @@ const packageChanges = new Map<Package, CommitInfo[]>();
 const versionUpdates = new Map<Package, VersionUpdate>();
 let jsonOutput = false;
 
-// Function to check versions
 export function checkVersions(isCI: boolean = false): void {
   const args = process.argv.slice(2);
   jsonOutput = args.includes("--json");
@@ -31,11 +27,12 @@ export function checkVersions(isCI: boolean = false): void {
   packageChanges.clear();
   versionUpdates.clear();
 
-  const configFile = existsSync(CONFIG_PATH)
-    ? CONFIG_PATH
-    : resolve(__dirname, "../release-config.json");
   try {
-    config = JSON.parse(readFileSync(configFile, "utf8")) as Config;
+    const configPath = CONFIG_PATH || args[0];
+    config = loadConfig(configPath);
+    if (!config) {
+      throw new Error("Failed to parse config file.");
+    }
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     if (isCI) {
@@ -407,11 +404,11 @@ export function checkVersions(isCI: boolean = false): void {
 
 // Export functions for testing
 export {
+  createVersion,
   determineVersionChange as determineNextVersion,
   getCommitRange,
   getCurrentVersion,
   getLastTag,
-  createVersion,
 };
 
 // Main execution

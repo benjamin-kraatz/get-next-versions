@@ -1,4 +1,5 @@
-export type NonScopeBehavior = "bump" | "ignore";
+export const nonScopeBehaviors = ["bump", "ignore"] as const;
+export type NonScopeBehavior = (typeof nonScopeBehaviors)[number];
 
 export interface Config {
   versionedPackages: Package[];
