@@ -35,11 +35,20 @@ export function printSection(title: string, content: string = ""): void {
  * The match is determined by the string-equality of the trimmed
  * and lowercased package name and the trimmed and lowercased scope.
  *
+ * If the scope is empty, this is the root package, so it is always in scope.
+ * To respect the `nonScopeBehavior`, you should manually filter.
+ *
  * @param scope - The scope to check the package name against.
  * @param pkgName - The package name to check.
  * @returns True if the package name matches the scope, otherwise false.
  */
 export function checkPackageInScope(scope: string, pkgName: string): boolean {
+  if (!scope) {
+    // this is the root package, so it is always in scope per sé.
+    // We have to later respect the `nonScopeBehavior`.
+    return true;
+  }
+
   return (
     pkgName.trim().toLocaleLowerCase() === scope.trim().toLocaleLowerCase()
   );
