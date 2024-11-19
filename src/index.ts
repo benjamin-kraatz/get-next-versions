@@ -186,13 +186,10 @@ export function checkVersions(isCI: boolean = false): void {
                   normalizedFile === normalizedDir;
           })
         ) {
-          addToList(`Direct changes in ${pkg.directory}`);
+          const message = `Direct changes in ${pkg.directory}`;
+          addToList(message);
           if (!jsonOutput && verboseMode) {
-            console.log(
-              colors.dim +
-                "  → Direct changes in package directory" +
-                colors.reset,
-            );
+            console.log(colors.dim + `  → ${message}` + colors.reset);
           }
         }
 
@@ -208,13 +205,10 @@ export function checkVersions(isCI: boolean = false): void {
               );
             });
             if (matchingChanges.length > 0) {
-              addToList(`Affected by changes in dependent package ${dep}`);
+              const message = `Affected by changes in dependent package ${dep}`;
+              addToList(message);
               if (!jsonOutput && verboseMode) {
-                console.log(
-                  colors.dim +
-                    "  → Affected by changes in dependent package" +
-                    colors.reset,
-                );
+                console.log(colors.dim + `  → ${message}` + colors.reset);
               }
             }
           });
