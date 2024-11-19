@@ -11,13 +11,14 @@ Automated versioning tool based on conventional commits and package dependencies
 
 ## Overview
 
-`get-next-versions` is a powerful automated versioning tool designed for both monorepos and single-package repositories. It analyzes your git commit history using conventional commits to automatically determine the next semantic version for your packages. Key features include:
+`get-next-versions` is a powerful automated versioning tool designed for monorepos. It analyzes your git commit history using conventional commits to automatically determine the next semantic version for your packages, utilizing git tags. Key features include:
 
 - 🔄 Automated version determination based on conventional commits
-- 📦 Support for monorepos with multiple packages
+- 📦 Works for monorepos with multiple packages
 - 🔗 Intelligent dependency tracking between packages
 - 🤖 Available as both an NPM package and a GitHub Action
 - 🎯 Configurable version bump rules
+- 🏷️ Uses git tags to keep track of versions
 - 💻 Human-readable CLI output and JSON format for CI environments
 
 ### How It Works
