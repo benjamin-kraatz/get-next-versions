@@ -54,14 +54,11 @@ For single-package repositories, you might want to consider alternatives like:
 
 ## Installation
 
-You can install this package from either NPM or GitHub Packages:
+You can install this package from NPM:
 
 ```bash
 # From NPM
-npm install get-next-versions
-
-# From GitHub Packages
-npm install @benjamin-kraatz/get-next-versions
+npm install --save-dev get-next-versions
 ```
 
 ## NPM Package Usage
@@ -95,6 +92,12 @@ Create a `release-config.json` file in your repository root:
 
 # Run version check (human-readable output)
 npm run version-check
+
+# Recommended: when there are changes and new versions are detected,
+# add the new tags to your repository
+# For example: pkg-v1.1.0 was detected
+git tag "pkg-v1.1.0"
+git push origin "pkg-v1.1.0" # or git push --tags
 ```
 
 The tool automatically detects if it's running in a CI environment (GitHub Actions, Jenkins, etc.) and will output JSON format when appropriate.
