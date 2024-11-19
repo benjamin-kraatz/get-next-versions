@@ -128,13 +128,13 @@ export function checkVersions(isCI: boolean = false): void {
         continue;
       }
 
-      const addToList = () => {
+      const addToList = (reason: string) => {
         commitsForPackage.push({
           hash: commit.hash,
           message: commit.message,
           type: relevance.type ?? commitInfo.type,
           breaking: relevance.type === "major" || commitInfo.breaking,
-          reasons: [],
+          reasons: [reason],
         });
       };
 
@@ -147,11 +147,14 @@ export function checkVersions(isCI: boolean = false): void {
         commitInfo.type === "major"
       ) {
         console.log(colors.dim + "  → Major version bump" + colors.reset);
-        addToList();
+        addToList("Major version bump");
         break;
       }
 
-      const isInScope = checkPackageInScope(commitInfo.scope, pkg.name);
+      // here comes the twist: if the directory is ".", we set the package scope to "".
+      const packageScope = pkg.directory === "." ? "" : pkg.directory;
+      const packageIsRootScope = packageScope === "";
+      const isInScope = checkPackageInScope(commitInfo.scope, packageScope);
       const scope = commitInfo.scope;
       const isRootScope = scope === "";
       if (!isInScope && !isRootScope) {
@@ -161,24 +164,29 @@ export function checkVersions(isCI: boolean = false): void {
       }
       if (isInScope && !isRootScope) {
         // it is the package itself.
-        addToList();
+        addToList("Changes in package scope");
         console.log(colors.dim + "  → Changes in package scope" + colors.reset);
         continue;
       }
 
       // check if the scope of the commit is root, and if so,
       // only include the commit if the nonScopeBehavior is "bump".
-      const bumpRootScope = config!.nonScopeBehavior === "bump";
+      const bumpRootScope =
+        packageIsRootScope || config!.nonScopeBehavior === "bump";
       if (isRootScope && bumpRootScope) {
         if (!jsonOutput) {
           console.log(
             colors.dim +
-              "  → Changes in root (nonScopeBehavior is set to 'bump')" +
+              `  → Changes in ${packageIsRootScope ? "scope" : "root (nonScopeBehavior is set to 'bump')"}` +
               colors.reset,
           );
         }
 
-        addToList();
+        addToList(
+          packageIsRootScope
+            ? "Changes in scope"
+            : "Changes in root (nonScopeBehavior is set to 'bump')",
+        );
       }
 
       // at this point, the commit is not relevant to the current package.
