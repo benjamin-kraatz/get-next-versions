@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  formatCommit,
   getChangedFilesInCommit,
   getCommitRange,
   getCommitsForTag,
@@ -9,7 +8,8 @@ import {
   parseCommitInfo,
 } from "./commits.js";
 import { loadConfig } from "./config.js";
-import { checkPackageInScope, colors, printSection } from "./helpers.js";
+import { checkPackageInScope, colors } from "./helpers.js";
+import { output } from "./outputs.js";
 import {
   CommitInfo,
   CommitMessage,
@@ -296,99 +296,7 @@ export function checkVersions(isCI: boolean = false): void {
     }
   });
 
-  // Output results
-  if (jsonOutput) {
-    const output: Map<
-      string,
-      {
-        currentVersion: string;
-        nextVersion: string;
-        hasChanges: boolean;
-      }
-    > = new Map();
-    for (const [pkg, version] of versionUpdates.entries()) {
-      output.set(pkg.name, {
-        currentVersion: version.currentVersion,
-        nextVersion: version.nextVersion,
-        hasChanges: version.hasChanges,
-      });
-    }
-    console.log(JSON.stringify(Object.fromEntries(output)));
-    return;
-  }
-
-  if (versionUpdates.size === 0) {
-    console.log(
-      `${colors.green}${colors.bright} ✓ No version updates required!${colors.reset}`,
-    );
-    return;
-  }
-
-  console.log(
-    "\n" +
-      colors.bright +
-      colors.magenta +
-      "🚀 Release Check Summary" +
-      colors.reset +
-      "\n",
-  );
-  console.log(colors.dim + "=".repeat(50) + colors.reset + "\n");
-
-  // Changes Overview
-  printSection("📦 Changes Detected:");
-  if (packageChanges.size > 0) {
-    const maxPkgLength = Math.max(
-      ...Array.from(packageChanges.keys()).map((pack) => pack.name.length),
-    );
-    for (const [pack, changes] of packageChanges.entries()) {
-      const pkg = pack.name.padEnd(maxPkgLength);
-      console.log(
-        `${colors.green}✓${colors.reset} ${pkg}  ${colors.cyan}${changes.length}${colors.reset} commits`,
-      );
-    }
-  } else {
-    console.log(`${colors.yellow}⚠ No changes detected${colors.reset}`);
-  }
-
-  // Version Updates
-  printSection("📝 Version Updates:");
-  if (versionUpdates.size > 0) {
-    const maxPkgLength = Math.max(
-      ...Array.from(versionUpdates.keys()).map((pack) => pack.name.length),
-    );
-    for (const [pack, update] of versionUpdates.entries()) {
-      const pkg = pack.name.padEnd(maxPkgLength);
-      const { tagPrefix, currentVersion, nextVersion } = update;
-      console.log(
-        `${colors.green}✓${colors.reset} ${pkg}  ${colors.dim}${tagPrefix}${currentVersion}${colors.reset} → ${colors.bright}${tagPrefix}${nextVersion}${colors.reset}`,
-      );
-    }
-  } else {
-    console.log(`${colors.yellow}⚠ No version updates needed${colors.reset}`);
-  }
-
-  // Detailed Changes
-  printSection("🔍 Detailed Changes:");
-  if (packageChanges.size > 0) {
-    for (const [pack, changes] of packageChanges.entries()) {
-      const pkg = pack.name;
-      console.log(`\n${colors.cyan}${pkg}${colors.reset}:`);
-      for (const { hash, message, reasons } of changes) {
-        console.log(
-          `  ${colors.green}•${colors.reset} ${formatCommit(hash, message)}`,
-        );
-        for (const reason of reasons) {
-          console.log(`    ${colors.dim}↳ ${reason}${colors.reset}`);
-        }
-      }
-    }
-  } else {
-    console.log(
-      `${colors.yellow}⚠ No detailed changes to show${colors.reset}`,
-    );
-  }
-
-  console.log("\n" + colors.dim + "=".repeat(50) + colors.reset + "\n");
+  output(jsonOutput ? "json" : "cli", packageChanges, versionUpdates);
 }
 
 // Export functions for testing
