@@ -39,22 +39,72 @@ export function determineVersionChange(commits: string[]): VersionChanges {
     patch: false,
   };
 
-  const breakingChangeRegex = /^(feat|fix)(\([^)]+\))?!:/;
   for (const commit of commits) {
     const message = commit.toLowerCase();
-    if (
-      message.includes("breaking change") ||
-      breakingChangeRegex.test(message)
-    ) {
-      changes.major = true;
-    } else if (message.startsWith("feat")) {
-      changes.minor = true;
-    } else if (message.startsWith("fix")) {
-      changes.patch = true;
+    const relevant = isCommitAnyRelevantConvention(message);
+    if (relevant.isRelevant) {
+      if (relevant.type === "major") {
+        changes.major = true;
+      } else if (relevant.type === "minor") {
+        changes.minor = true;
+      } else if (relevant.type === "patch") {
+        changes.patch = true;
+      }
     }
   }
 
   return changes;
+}
+
+  /**
+   * Determines if the given commit message matches any of the conventions
+   * for triggering a version change.
+   *
+   * The conventions are:
+   *   - "BREAKING CHANGE" appears anywhere in the commit message
+   *   - Commit type (feat or fix) has an exclamation mark (!) at the end
+   *     (e.g., "feat!:" or "feat(scope)!:")
+   *   - Commit message starts with "feat"
+   *   - Commit message starts with "fix"
+   *
+   * If the commit message matches any of these conventions, the function
+   * returns an object with `isRelevant` set to true and `type` set to one of
+   * "major", "minor", or "patch".
+   *
+   * If the commit message does not match any of these conventions, the function
+   * returns an object with `isRelevant` set to false.
+   *
+   * @param commit - The commit message to check.
+   * @returns An object with `isRelevant` and `type` properties.
+   */
+export function isCommitAnyRelevantConvention(commit: string): {
+  isRelevant: boolean;
+  type?: "major" | "minor" | "patch";
+} {
+  const commitMessage = commit.toLowerCase();
+  const breakingChangeRegex = /^(feat|fix)(\([^)]+\))?!:/;
+  if (
+    commitMessage.includes("breaking change") ||
+    breakingChangeRegex.test(commitMessage)
+  ) {
+    return {
+      isRelevant: true,
+      type: "major",
+    };
+  } else if (commitMessage.startsWith("feat")) {
+    return {
+      isRelevant: true,
+      type: "minor",
+    };
+  } else if (commitMessage.startsWith("fix")) {
+    return {
+      isRelevant: true,
+      type: "patch",
+    };
+  }
+  return {
+    isRelevant: false,
+  };
 }
 
 /**
