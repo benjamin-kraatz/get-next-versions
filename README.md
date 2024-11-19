@@ -18,6 +18,7 @@ Automated versioning tool based on conventional commits and package dependencies
 - 🔗 Intelligent dependency tracking between packages
 - 🤖 Available as both an NPM package and a GitHub Action
 - 🎯 Configurable version bump rules
+- 🏷️ Uses git tags to keep track of versions
 - 💻 Human-readable CLI output and JSON format for CI environments
 
 ### How It Works
