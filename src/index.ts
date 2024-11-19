@@ -289,7 +289,7 @@ export function checkVersions(isCI: boolean = false): void {
           currentVersion,
           nextVersion,
           changes,
-          hasChanges: true,
+          hasChanges: currentVersion !== nextVersion,
         });
       }
     }
