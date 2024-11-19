@@ -1,3 +1,6 @@
+import { Package } from "./types.js";
+import { isCommitAnyRelevantConvention } from "./versions.js";
+
 export const colors = {
   reset: "\x1b[0m",
   bright: "\x1b[1m",
@@ -40,4 +43,26 @@ export function checkPackageInScope(scope: string, pkgName: string): boolean {
   return (
     pkgName.trim().toLocaleLowerCase() === scope.trim().toLocaleLowerCase()
   );
+}
+
+/**
+ * Filters a list of packages based on whether a commit message
+ * matches the name of a package and the commit message is a relevant
+ * convention.
+ *
+ * @param pkgNames - The list of packages to filter.
+ * @param commitMessage - The commit message to check against.
+ * @returns A list of packages where the commit message matches the package
+ * name and the commit message is a relevant convention.
+ */
+export function getCommitPackages(
+  pkgNames: Package[],
+  commitMessage: string,
+): Package[] {
+  return pkgNames.filter((pkgName) => {
+    const relevance = isCommitAnyRelevantConvention(commitMessage);
+    return (
+      relevance.isRelevant && checkPackageInScope(pkgName.name, commitMessage)
+    );
+  });
 }
