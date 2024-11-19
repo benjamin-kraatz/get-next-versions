@@ -290,8 +290,8 @@ The tool provides two output formats:
     app:
       • abc0102 feat(app): add new feature
         ↳ Direct changes in apps/app
-      • ghi9012 fix(app): fix bug
-        ↳ Changes in dependent package packages/package-a
+      • ghi9012 fix(package-a): fix bug
+        ↳ Changes in dependent package packages/package-a affecting apps/app
     package-a:
       • abc1234 feat(package-a): add new feature
         ↳ Direct changes in packages/package-a
