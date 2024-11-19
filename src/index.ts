@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatCommit, getCommitRange, getLastTag } from "./commits.js";
 import { colors, printSection } from "./helpers.js";
+import { getCurrentVersion, determineVersionChange } from "./versions.js";
 import {
   CommitInfo,
   Config,
@@ -18,37 +19,6 @@ const __dirname = dirname(__filename);
 // Load configuration
 const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
 let config: Config | undefined;
-
-function getCurrentVersion(prefix: string): string {
-  const lastTag = getLastTag(prefix);
-  if (!lastTag) return "0.0.0";
-  return lastTag.replace(prefix, "");
-}
-
-function determineVersionChange(commits: string[]): VersionChanges {
-  const changes: VersionChanges = {
-    major: false,
-    minor: false,
-    patch: false,
-  };
-
-  for (const commit of commits) {
-    const message = commit.toLowerCase();
-    if (
-      message.startsWith("breaking") ||
-      message.includes("breaking change") ||
-      message.includes("breaking-change")
-    ) {
-      changes.major = true;
-    } else if (message.startsWith("feat")) {
-      changes.minor = true;
-    } else if (message.startsWith("fix")) {
-      changes.patch = true;
-    }
-  }
-
-  return changes;
-}
 
 function getNextVersion(
   currentVersion: string,
