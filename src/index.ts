@@ -31,10 +31,12 @@ let config: Config | undefined;
 const packageChanges = new Map<Package, CommitInfo[]>();
 const versionUpdates = new Map<Package, VersionUpdate>();
 let jsonOutput = false;
+let verboseMode = false;
 
 export function checkVersions(isCI: boolean = false): void {
   const args = process.argv.slice(2);
   jsonOutput = args.includes("--json");
+  verboseMode = args.includes("--verbose");
 
   packageChanges.clear();
   versionUpdates.clear();
@@ -108,7 +110,7 @@ export function checkVersions(isCI: boolean = false): void {
     // filter the commits to only include those that affect the current package.
     const commitsForPackage: CommitInfo[] = [];
     for (const commit of commits) {
-      if (!jsonOutput) {
+      if (!jsonOutput && verboseMode) {
         console.log(
           `${colors.magenta}🔍 Analyzing:${colors.reset}`,
           colors.dim + commit.hash.slice(0, 7) + colors.reset,
@@ -146,7 +148,9 @@ export function checkVersions(isCI: boolean = false): void {
         commitInfo.breaking ||
         commitInfo.type === "major"
       ) {
-        console.log(colors.dim + "  → Major version bump" + colors.reset);
+        if (!jsonOutput && verboseMode) {
+          console.log(colors.dim + "  → Major version bump" + colors.reset);
+        }
         addToList("Major version bump");
         break;
       }
@@ -165,7 +169,11 @@ export function checkVersions(isCI: boolean = false): void {
       if (isInScope && !isRootScope) {
         // it is the package itself.
         addToList("Changes in package scope");
-        console.log(colors.dim + "  → Changes in package scope" + colors.reset);
+        if (!jsonOutput && verboseMode) {
+          console.log(
+            colors.dim + "  → Changes in package scope" + colors.reset,
+          );
+        }
         continue;
       }
 
@@ -174,7 +182,7 @@ export function checkVersions(isCI: boolean = false): void {
       const bumpRootScope =
         packageIsRootScope || config!.nonScopeBehavior === "bump";
       if (isRootScope && bumpRootScope) {
-        if (!jsonOutput) {
+        if (!jsonOutput && verboseMode) {
           console.log(
             colors.dim +
               `  → Changes in ${packageIsRootScope ? "scope" : "root (nonScopeBehavior is set to 'bump')"}` +
@@ -191,6 +199,7 @@ export function checkVersions(isCI: boolean = false): void {
 
       // at this point, the commit is not relevant to the current package.
       // But we want to include the `dependsOn` checks and commits as well.
+      //
     }
 
     packageChanges.set(pkg, commitsForPackage);
@@ -199,7 +208,7 @@ export function checkVersions(isCI: boolean = false): void {
       const countCommitsPerPackage = packageChanges.get(pkg)?.length ?? 0;
       console.log(
         colors.dim +
-          `Found ${countCommitsPerPackage} relevant commits${lastTag ? ` since ${lastTag}` : ""}` +
+          `   Found ${countCommitsPerPackage} relevant commits${lastTag ? ` since ${lastTag}` : ""}` +
           colors.reset +
           "\n",
       );
