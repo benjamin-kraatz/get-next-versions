@@ -1,7 +1,7 @@
 # Get Next Versions
 
 [![Release](https://github.com/benjamin-kraatz/get-next-versions/actions/workflows/release.yml/badge.svg)](https://github.com/benjamin-kraatz/get-next-versions/actions/workflows/release.yml)
-![NPM Version](https://img.shields.io/npm/v/get-next-versions)
+[![NPM](https://img.shields.io/npm/v/get-next-versions.svg)](https://www.npmjs.com/package/get-next-versions)
 
 > ⚠️ **Development Status**: This package is currently in early development (version < 1.0). The API and functionality may change significantly between releases. Use with caution in production environments.
 
