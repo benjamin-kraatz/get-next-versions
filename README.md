@@ -129,6 +129,8 @@ jobs:
         if: ${{ fromJSON(steps.version_check.outputs.changes).your-package.has_changes }}
         run: |
           echo "New version: ${{ fromJSON(steps.version_check.outputs.changes).your-package.next_version }}"
+          # ... other actions ...
+          # we recommend adding tags here
 ```
 
 ## Configuration Options
