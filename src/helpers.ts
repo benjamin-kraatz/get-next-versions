@@ -23,3 +23,21 @@ export function printSection(title: string, content: string = ""): void {
     console.log(content);
   }
 }
+
+/**
+ * Checks if the given package name matches the given scope.
+ *
+ * This function returns true if the given package name matches the given
+ * scope, and false otherwise.
+ * The match is determined by the string-equality of the trimmed
+ * and lowercased package name and the trimmed and lowercased scope.
+ *
+ * @param scope - The scope to check the package name against.
+ * @param pkgName - The package name to check.
+ * @returns True if the package name matches the scope, otherwise false.
+ */
+export function checkPackageInScope(scope: string, pkgName: string): boolean {
+  return (
+    pkgName.trim().toLocaleLowerCase() === scope.trim().toLocaleLowerCase()
+  );
+}

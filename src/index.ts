@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatCommit, getCommitRange, getLastTag } from "./commits.js";
-import { colors, printSection } from "./helpers.js";
+import { checkPackageInScope, colors, printSection } from "./helpers.js";
 import { CommitInfo, Config, Package, VersionUpdate } from "./types.js";
 import {
   createVersion,
@@ -17,10 +17,6 @@ const __dirname = dirname(__filename);
 // Load configuration
 const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
 let config: Config | undefined;
-
-function checkPackageInScope(scope: string, pkgName: string): boolean {
-  return pkgName.trim() === scope.trim();
-}
 
 // Initialize maps to store changes and version updates
 const packageChanges = new Map<Package, CommitInfo[]>();
