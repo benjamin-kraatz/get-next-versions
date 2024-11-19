@@ -2,6 +2,8 @@ import { execSync } from "child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { formatCommit } from "./commits.js";
+import { colors } from "./helpers.js";
 import {
   CommitInfo,
   Config,
@@ -9,7 +11,6 @@ import {
   VersionChanges,
   VersionUpdate,
 } from "./types.js";
-import { colors } from "./helpers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,12 +18,6 @@ const __dirname = dirname(__filename);
 // Load configuration
 const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
 let config: Config | undefined;
-
-// Add color support
-
-function formatCommit(hash: string, message: string): string {
-  return `${colors.yellow}${hash.slice(0, 7)}${colors.reset} ${message}`;
-}
 
 function printSection(title: string, content: string = ""): void {
   console.log(`\n${colors.bright}${colors.blue}${title}${colors.reset}`);
