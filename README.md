@@ -155,7 +155,8 @@ The `release-config.json` file is the heart of your versioning configuration. He
       "directory": "packages/your-package",
       "dependsOn": ["packages/*"]
     }
-  ]
+  ],
+  "nonScopeBehavior": "ignore"
 }
 ```
 
@@ -175,6 +176,10 @@ The `release-config.json` file is the heart of your versioning configuration. He
   - `["packages/*"]`: Depends on all packages in the packages directory
   - `["packages/ui", "packages/core"]`: Depends on specific packages
   - `["shared/**"]`: Depends on everything in the shared directory
+
+- `nonScopeBehavior` (optional): Determines the behavior when a commit doesn't have a scope. This is the case when commits were made for the root/entire repository. Options:
+  - `"bump"` (default): Consider this commit as a version bump
+  - `"ignore"`: Ignore the commit
 
 ### Git Tags and Version History
 
