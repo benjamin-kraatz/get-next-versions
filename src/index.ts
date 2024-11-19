@@ -1,7 +1,12 @@
 import { execSync } from "child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { formatCommit, getCommitRange, getLastTag } from "./commits.js";
+import {
+  formatCommit,
+  getCommitRange,
+  getCommitsForTag,
+  getLastTag,
+} from "./commits.js";
 import { loadConfig } from "./config.js";
 import { checkPackageInScope, colors, printSection } from "./helpers.js";
 import { CommitInfo, Config, Package, VersionUpdate } from "./types.js";
@@ -54,6 +59,33 @@ export function checkVersions(isCI: boolean = false): void {
     }
     process.exit(1);
   }
+
+  // get all commits up to the last tag for each package.
+  // If there is no tag, start from the root commit for each package.
+  let commitMessages: string[] = [];
+  if (!jsonOutput) {
+    console.log(
+      `${colors.green}✅ ${colors.bright}Found ${config.versionedPackages.length} packages in config file.${colors.reset}`,
+    );
+    for (const pkg of config.versionedPackages) {
+      const lastTag = getLastTag(pkg.tagPrefix);
+      const version = lastTag?.replaceAll(pkg.tagPrefix, "") || "0.0.0";
+      console.log(
+        `${colors.green}   ${colors.dim}↦ ${pkg.name}: ${version}${colors.reset}`,
+      );
+
+      const commits = getCommitsForTag(lastTag || "HEAD");
+      commitMessages.push(...commits);
+
+      // clean up commit messages to remove duplicates.
+      // we do it here to prevent memory overusage.
+      commitMessages = Array.from(new Set(commitMessages));
+    }
+  }
+
+  console.log(
+    `\n${colors.green}✅ ${colors.bright}Found ${commitMessages.length} relevant commits.${colors.reset}`,
+  );
 
   // Process each package
   for (const versionedPackage of config.versionedPackages) {
