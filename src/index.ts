@@ -38,7 +38,6 @@ export function checkVersions(isCI: boolean = false): void {
     if (isCI) {
       console.error(`Error parsing config file: ${errMsg}`);
       process.exit(1);
-      return;
     }
     console.error(
       `${colors.red}⛔️ ${colors.bright}Error: Failed to parse config file.\nCheck out https://github.com/benjamin-kraatz/get-next-versions?tab=readme-ov-file#configuration for more details:\n${colors.reset}\n${colors.red}${errMsg}${colors.reset}`,

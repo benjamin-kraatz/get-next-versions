@@ -23,10 +23,6 @@ import { Config, nonScopeBehaviors } from "./types.js";
  */
 export function loadConfig(path: string): Config {
   const config = JSON.parse(readFileSync(path, "utf8")) as Config;
-
-  if (config.versionedPackages.length === 0) {
-    throw new Error("No packages defined in config file.");
-  }
   if (
     config.nonScopeBehavior &&
     !nonScopeBehaviors.includes(config.nonScopeBehavior)
