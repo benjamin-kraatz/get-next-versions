@@ -243,16 +243,23 @@ The tool follows semantic versioning (MAJOR.MINOR.PATCH) rules based on conventi
    - New functionality that doesn't break existing code
 
 3. **Patch Version** (1.0.0 → 1.0.1)
-   Patches are detected from various commit types:
-   - Bug fixes: `fix(pkg): message`
-   - Documentation: `docs(pkg): message`
-   - Styles: `style(pkg): message`
-   - Code refactoring: `refactor(pkg): message`
-   - Performance improvements: `perf(pkg): message`
-   - Tests: `test(pkg): message`
-   - Build changes: `build(pkg): message`
-   - CI changes: `ci(pkg): message`
-   - Chores: `chore(pkg): message`
+   Patches are detected from `fix` commit types:
+   - `fix(pkg): message`
+
+**Other conventional commit types are _not_ causing a version bump!**
+
+Here are some examples:
+
+- Chores: `chore(pkg): message`
+- Refactor commits: `refactor(pkg): message`
+- Documentation: `docs(pkg): message`
+- Styles: `style(pkg): message`
+- Code refactoring: `refactor(pkg): message`
+- Performance improvements: `perf(pkg): message`
+- Tests: `test(pkg): message`
+- Build changes: `build(pkg): message`
+- CI changes: `ci(pkg): message`
+- Chores: `chore(pkg): message`
 
 ### CLI Output Formats
 
