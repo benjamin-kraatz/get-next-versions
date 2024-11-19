@@ -122,6 +122,13 @@ The following command-line flags are available to customize the behavior of `get
 | `--verbose` | Enable verbose logging mode. Shows detailed information about commit analysis, file changes, and decision-making process            |
 | `--publish` | Automatically create and push git tags when new versions are detected. This eliminates the need for manual tag creation and pushing |
 
+When `--publish` is not used, the CLI will enter an interactive mode after detecting version changes, asking whether to:
+- Create and publish tags (Y)
+- Skip tag creation (N)
+- Create tags without publishing (C)
+
+This interactive mode provides flexibility when you want to review the changes before pushing tags to the remote repository.
+
 More flags will be added in future releases to provide additional functionality and customization options.
 
 ## GitHub Action Usage
