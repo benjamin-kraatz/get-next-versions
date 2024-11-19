@@ -123,9 +123,7 @@ function determineVersionChange(commits: string[]): VersionChanges {
       changes.major = true;
     } else if (message.startsWith("feat")) {
       changes.minor = true;
-    } else if (
-      message.startsWith("fix")
-    ) {
+    } else if (message.startsWith("fix")) {
       changes.patch = true;
     }
   }
@@ -302,9 +300,11 @@ export function checkVersions(isCI: boolean = false): void {
           breaking,
           reasons: ["Versioning commit detected"],
         });
-        console.log(
-          colors.dim + "  → Adding commit to changes list" + colors.reset,
-        );
+        if (!jsonOutput) {
+          console.log(
+            colors.dim + "  → Adding commit to changes list" + colors.reset,
+          );
+        }
 
         // Get changed files in this commit for informational purposes
         const changedFiles = execSync(
@@ -432,9 +432,20 @@ export function checkVersions(isCI: boolean = false): void {
 
   // Output results
   if (jsonOutput) {
-    const output: Map<Package, VersionUpdate> = new Map();
+    const output: Map<
+      Package,
+      {
+        currentVersion: string;
+        nextVersion: string;
+        hasChanges: boolean;
+      }
+    > = new Map();
     versionUpdates.forEach((version, pkg) => {
-      output.set(pkg, version);
+      output.set(pkg, {
+        currentVersion: version.currentVersion,
+        nextVersion: version.nextVersion,
+        hasChanges: version.hasChanges,
+      });
     });
     console.log(JSON.stringify(Object.fromEntries(output), null, 2));
     return;
