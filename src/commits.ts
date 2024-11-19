@@ -146,6 +146,20 @@ export function getChangedFilesInCommit(commitHash: string): string[] {
 }
 
 /**
+ * Creates a new git tag with the given name.
+ *
+ * @param tag - The name of the tag to create.
+ * @param publish - If true, the tag will be pushed to the origin repository
+ * after creation.
+ */
+export function createTag(tag: string, publish: boolean = true): void {
+  runCommand(`git tag ${tag}`);
+  if (publish) {
+    runCommand(`git push origin ${tag}`);
+  }
+}
+
+/**
  * Runs a command and returns the result as a string.
  *
  * Returns `undefined` if the command fails or produces no output.
@@ -153,7 +167,7 @@ export function getChangedFilesInCommit(commitHash: string): string[] {
  * @param command - The command to run.
  * @returns The output of the command as a string, if successful.
  */
-export function runCommand(command: string): string | undefined {
+function runCommand(command: string): string | undefined {
   try {
     return execSync(command).toString().trim();
   } catch {

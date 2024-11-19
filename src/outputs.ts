@@ -1,4 +1,4 @@
-import { formatCommit, runCommand } from "./commits.js";
+import { createTag, formatCommit } from "./commits.js";
 import { colors, printSection } from "./helpers.js";
 import { CLIOptions, CommitInfo, Package, VersionUpdate } from "./types.js";
 
@@ -146,8 +146,8 @@ function outputCLI(
     );
     for (const [pack, update] of versionUpdates) {
       const { tagPrefix, nextVersion } = update;
-      runCommand(`git tag ${tagPrefix}${nextVersion}`);
-      runCommand(`git push origin ${tagPrefix}${nextVersion}`);
+      const newTag = `${tagPrefix}${nextVersion}`;
+      createTag(newTag);
       console.log(
         `${colors.green}✓${colors.reset} ${pack.name}  ${colors.dim}${tagPrefix}${nextVersion}${colors.reset}`,
       );
