@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatCommit } from "./commits.js";
-import { colors } from "./helpers.js";
+import { colors, printSection } from "./helpers.js";
 import {
   CommitInfo,
   Config,
@@ -18,13 +18,6 @@ const __dirname = dirname(__filename);
 // Load configuration
 const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
 let config: Config | undefined;
-
-function printSection(title: string, content: string = ""): void {
-  console.log(`\n${colors.bright}${colors.blue}${title}${colors.reset}`);
-  if (content) {
-    console.log(content);
-  }
-}
 
 function getLastTag(prefix: string): string {
   try {
