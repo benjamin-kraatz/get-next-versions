@@ -336,6 +336,9 @@ Common issues and solutions:
 npm install
 
 # Run tests
+# NOTE: currently we have not migrated Jest to TypeScript.
+# Therefore, a build step is required before running tests.
+# It is included in the `test` script.
 npm test
 
 # Build

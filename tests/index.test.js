@@ -30,14 +30,10 @@ jest.unstable_mockModule("fs", () => ({
 
 // Import mocked modules
 const { execSync } = await import("child_process");
-const { readFileSync } = await import("fs");
 
 // Import the functions after setting up mocks
 const { getLastTag, getCurrentVersion, determineNextVersion, getNextVersion } =
-  await import("../src/index.js");
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+  await import("../dist/index.js");
 
 describe("Release Check", () => {
   beforeEach(() => {
@@ -91,7 +87,7 @@ describe("Release Check", () => {
         { message: "fix: minor fix" },
       ];
 
-      const result = determineNextVersion(commits);
+      const result = determineNextVersion(commits.map((c) => c.message));
       expect(result).toEqual({
         major: true,
         minor: false,
@@ -105,7 +101,7 @@ describe("Release Check", () => {
         { message: "fix: minor fix" },
       ];
 
-      const result = determineNextVersion(commits);
+      const result = determineNextVersion(commits.map((c) => c.message));
       expect(result).toEqual({
         major: false,
         minor: true,
@@ -119,7 +115,7 @@ describe("Release Check", () => {
         { message: "chore: update dependencies" },
       ];
 
-      const result = determineNextVersion(commits);
+      const result = determineNextVersion(commits.map((c) => c.message));
       expect(result).toEqual({
         major: false,
         minor: false,
@@ -156,13 +152,13 @@ describe("Release Check", () => {
       expect(result).toBe("1.2.4");
     });
 
-    it("should return null when no changes detected", () => {
+    it("should return the same version when no changes detected", () => {
       const result = getNextVersion("1.2.3", {
         major: false,
         minor: false,
         patch: false,
       });
-      expect(result).toBeNull();
+      expect(result).toBe("1.2.3");
     });
   });
 });
