@@ -56,3 +56,44 @@ export function determineVersionChange(commits: string[]): VersionChanges {
 
   return changes;
 }
+
+/**
+ * Calculates the next version based on the given version changes.
+ *
+ * If the given VersionChanges object indicates a major version change,
+ * the major version is incremented and the minor and patch versions are
+ * reset to 0.
+ *
+ * If the given VersionChanges object indicates a minor version change,
+ * the minor version is incremented and the patch version is reset to 0.
+ *
+ * If the given VersionChanges object indicates a patch version change,
+ * the patch version is incremented.
+ *
+ * If the given VersionChanges object does not indicate any version changes,
+ * the current version is returned unchanged.
+ *
+ * @param currentVersion - The current version (e.g., "1.2.3").
+ * @param changes - The version changes to apply.
+ * @returns The next version (e.g., "1.2.4").
+ */
+export function createVersion(
+  currentVersion: string,
+  changes: VersionChanges,
+): string {
+  const [major, minor, patch] = currentVersion.split(".").map(Number);
+
+  if (changes.major) {
+    return `${major + 1}.0.0`;
+  }
+
+  if (changes.minor) {
+    return `${major}.${minor + 1}.0`;
+  }
+
+  if (changes.patch) {
+    return `${major}.${minor}.${patch + 1}`;
+  }
+
+  return currentVersion;
+}

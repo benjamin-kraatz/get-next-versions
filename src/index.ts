@@ -4,14 +4,12 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatCommit, getCommitRange, getLastTag } from "./commits.js";
 import { colors, printSection } from "./helpers.js";
-import { getCurrentVersion, determineVersionChange } from "./versions.js";
+import { CommitInfo, Config, Package, VersionUpdate } from "./types.js";
 import {
-  CommitInfo,
-  Config,
-  Package,
-  VersionChanges,
-  VersionUpdate,
-} from "./types.js";
+  createVersion,
+  determineVersionChange,
+  getCurrentVersion,
+} from "./versions.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,27 +17,6 @@ const __dirname = dirname(__filename);
 // Load configuration
 const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
 let config: Config | undefined;
-
-function getNextVersion(
-  currentVersion: string,
-  changes: VersionChanges,
-): string {
-  const [major, minor, patch] = currentVersion.split(".").map(Number);
-
-  if (changes.major) {
-    return `${major + 1}.0.0`;
-  }
-
-  if (changes.minor) {
-    return `${major}.${minor + 1}.0`;
-  }
-
-  if (changes.patch) {
-    return `${major}.${minor}.${patch + 1}`;
-  }
-
-  return currentVersion;
-}
 
 function checkPackageInScope(scope: string, pkgName: string): boolean {
   return pkgName.trim() === scope.trim();
@@ -323,7 +300,7 @@ export function checkVersions(isCI: boolean = false): void {
       const versionChanges = determineVersionChange(
         changes.map((c) => c.message),
       );
-      const nextVersion = getNextVersion(currentVersion, versionChanges);
+      const nextVersion = createVersion(currentVersion, versionChanges);
 
       if (nextVersion) {
         versionUpdates.set(pkg, {
@@ -438,7 +415,7 @@ export {
   getCommitRange,
   getCurrentVersion,
   getLastTag,
-  getNextVersion,
+  createVersion,
 };
 
 // Main execution

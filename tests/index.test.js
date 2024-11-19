@@ -30,7 +30,7 @@ jest.unstable_mockModule("fs", () => ({
 const { execSync } = await import("node:child_process");
 
 // Import the functions after setting up mocks
-const { getLastTag, getCurrentVersion, determineNextVersion, getNextVersion } =
+const { getLastTag, getCurrentVersion, determineNextVersion, createVersion } =
   await import("../dist/index.js");
 
 describe("Release Check", () => {
@@ -122,9 +122,9 @@ describe("Release Check", () => {
     });
   });
 
-  describe("getNextVersion", () => {
+  describe("createVersion", () => {
     it("should bump major version for breaking changes", () => {
-      const result = getNextVersion("1.2.3", {
+      const result = createVersion("1.2.3", {
         major: true,
         minor: false,
         patch: false,
@@ -133,7 +133,7 @@ describe("Release Check", () => {
     });
 
     it("should bump minor version for new features", () => {
-      const result = getNextVersion("1.2.3", {
+      const result = createVersion("1.2.3", {
         major: false,
         minor: true,
         patch: false,
@@ -142,7 +142,7 @@ describe("Release Check", () => {
     });
 
     it("should bump patch version for fixes", () => {
-      const result = getNextVersion("1.2.3", {
+      const result = createVersion("1.2.3", {
         major: false,
         minor: false,
         patch: true,
@@ -151,7 +151,7 @@ describe("Release Check", () => {
     });
 
     it("should return the same version when no changes detected", () => {
-      const result = getNextVersion("1.2.3", {
+      const result = createVersion("1.2.3", {
         major: false,
         minor: false,
         patch: false,
