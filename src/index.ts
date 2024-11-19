@@ -124,13 +124,7 @@ function determineVersionChange(commits: string[]): VersionChanges {
     } else if (message.startsWith("feat")) {
       changes.minor = true;
     } else if (
-      message.startsWith("fix") ||
-      message.startsWith("docs") ||
-      message.startsWith("chore") ||
-      message.startsWith("style") ||
-      message.startsWith("refactor") ||
-      message.startsWith("perf") ||
-      message.startsWith("test")
+      message.startsWith("fix")
     ) {
       changes.patch = true;
     }
