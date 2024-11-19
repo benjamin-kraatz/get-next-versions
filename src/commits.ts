@@ -102,6 +102,41 @@ export function getCommitRange(prefix: string, limit?: number): string {
 }
 
 /**
+ * Parses a commit message into a structured object.
+ *
+ * The input message must conform to the following format:
+ *   - A single word for the type (e.g. "feat", "fix", "docs")
+ *   - Optional: a scope in parentheses (e.g. "feat(api):")
+ *   - Optional: an exclamation mark at the end to indicate a breaking change
+ *     (e.g. "feat!:", "feat(api)!:")
+ *
+ * If the input message does not match this format, the function returns `undefined`.
+ *
+ * @param message - The commit message to parse.
+ * @returns An object with the parsed properties, or `undefined` if the message does not match the format.
+ */
+export function parseCommitInfo(message: string):
+  | {
+      type: string;
+      scope: string;
+      breaking: boolean;
+    }
+  | undefined {
+  const match = message.match(/^([a-z]+)(?:\(([^)]+)\))?(!)?:/);
+  if (!match) {
+    return undefined;
+  }
+
+  const [, type, scopeMatch, breakingMatch] = match;
+  const scope = scopeMatch || "";
+  return {
+    type,
+    scope,
+    breaking: !!breakingMatch,
+  };
+}
+
+/**
  * Retrieves a list of commits within a given range.
  *
  * The commits are fetched using `git log`, and the commit range is passed
