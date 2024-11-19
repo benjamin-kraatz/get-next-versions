@@ -146,6 +146,22 @@ export function getChangedFilesInCommit(commitHash: string): string[] {
 }
 
 /**
+ * Runs a command and returns the result as a string.
+ *
+ * Returns `undefined` if the command fails or produces no output.
+ *
+ * @param command - The command to run.
+ * @returns The output of the command as a string, if successful.
+ */
+export function runCommand(command: string): string | undefined {
+  try {
+    return execSync(command).toString().trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Retrieves a list of commits within a given range.
  *
  * The commits are fetched using `git log`, and the commit range is passed
@@ -170,21 +186,5 @@ function getCommits(commitRange: string): string[] {
     return commitsRaw.toString().trim().split("\n").filter(Boolean);
   } catch {
     return [];
-  }
-}
-
-/**
- * Runs a command and returns the result as a string.
- *
- * Returns `undefined` if the command fails or produces no output.
- *
- * @param command - The command to run.
- * @returns The output of the command as a string, if successful.
- */
-function runCommand(command: string): string | undefined {
-  try {
-    return execSync(command).toString().trim();
-  } catch {
-    return undefined;
   }
 }
