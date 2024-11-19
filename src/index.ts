@@ -86,7 +86,7 @@ function getLastTag(prefix: string): string {
     const matchPattern = prefix === "v" ? "v[0-9]*" : `${prefix}*`;
     // Redirect stderr to /dev/null to suppress "fatal: No names found" message
     return execSync(
-      `git describe --tags --match "${matchPattern}" --abbrev=0 2>/dev/null`
+      `git describe --tags --match "${matchPattern}" --abbrev=0 2>/dev/null`,
     )
       .toString()
       .trim();
@@ -141,7 +141,7 @@ function determineVersionChange(commits: string[]): VersionChanges {
 
 function getNextVersion(
   currentVersion: string,
-  changes: VersionChanges
+  changes: VersionChanges,
 ): string {
   const [major, minor, patch] = currentVersion.split(".").map(Number);
 
@@ -190,7 +190,7 @@ export function checkVersions(isCI: boolean = false): void {
       return;
     }
     console.error(
-      `${colors.red}⛔️ ${colors.bright}Error: Failed to parse config file.\nCheck out https://github.com/benjamin-kraatz/get-next-versions?tab=readme-ov-file#configuration for more details:\n${colors.reset}\n${colors.red}${errMsg}${colors.reset}`
+      `${colors.red}⛔️ ${colors.bright}Error: Failed to parse config file.\nCheck out https://github.com/benjamin-kraatz/get-next-versions?tab=readme-ov-file#configuration for more details:\n${colors.reset}\n${colors.red}${errMsg}${colors.reset}`,
     );
     process.exit(1);
   }
@@ -199,7 +199,7 @@ export function checkVersions(isCI: boolean = false): void {
   if (config.versionedPackages.length === 0) {
     if (!jsonOutput) {
       console.error(
-        `${colors.red}⛔️ ${colors.bright}Error: No packages defined in config file.${colors.reset}`
+        `${colors.red}⛔️ ${colors.bright}Error: No packages defined in config file.${colors.reset}`,
       );
     }
     process.exit(1);
@@ -211,7 +211,7 @@ export function checkVersions(isCI: boolean = false): void {
     const prefix = packagePrefix || "v";
     if (!jsonOutput && !packagePrefix) {
       console.warn(
-        `${colors.yellow}⚠️ Warning:${colors.reset} No tag prefix found for package "${versionedPackage.name}", using '${versionedPackage.name}-v' as default.`
+        `${colors.yellow}⚠️ Warning:${colors.reset} No tag prefix found for package "${versionedPackage.name}", using '${versionedPackage.name}-v' as default.`,
       );
     }
 
@@ -233,13 +233,13 @@ export function checkVersions(isCI: boolean = false): void {
       if (!jsonOutput) {
         console.log(
           "\n" + colors.cyan + "📦 Package:" + colors.reset,
-          colors.bright + versionedPackage.name + colors.reset
+          colors.bright + versionedPackage.name + colors.reset,
         );
         console.log(
           colors.dim +
             `Found ${commits.length} commits since ${prefix}` +
             colors.reset +
-            "\n"
+            "\n",
         );
       }
 
@@ -252,7 +252,7 @@ export function checkVersions(isCI: boolean = false): void {
             `${colors.magenta}🔍 Analyzing:${colors.reset}`,
             colors.dim + hashSubstring + colors.reset,
             "-",
-            colors.bright + message + colors.reset
+            colors.bright + message + colors.reset,
           );
         }
 
@@ -272,7 +272,7 @@ export function checkVersions(isCI: boolean = false): void {
         // Note that the scope can be empty, we should consider that as well.
         const isScopePackage = checkPackageInScope(
           scope,
-          versionedPackage.name
+          versionedPackage.name,
         );
         const isRootPackage = scope === "";
         const ignoreNonScope = config.nonScopeBehavior === "ignore";
@@ -282,7 +282,7 @@ export function checkVersions(isCI: boolean = false): void {
               colors.dim +
                 "  → Skipping commit from other package" +
                 `${isRootPackage ? " (root package)" : "(scoped package)"}` +
-                colors.reset
+                colors.reset,
             );
           }
           continue;
@@ -294,7 +294,7 @@ export function checkVersions(isCI: boolean = false): void {
         if (!isVersioningCommit) {
           if (!jsonOutput) {
             console.log(
-              colors.dim + "  → Skipping non-versioning commit" + colors.reset
+              colors.dim + "  → Skipping non-versioning commit" + colors.reset,
             );
           }
           continue;
@@ -309,12 +309,12 @@ export function checkVersions(isCI: boolean = false): void {
           reasons: ["Versioning commit detected"],
         });
         console.log(
-          colors.dim + "  → Adding commit to changes list" + colors.reset
+          colors.dim + "  → Adding commit to changes list" + colors.reset,
         );
 
         // Get changed files in this commit for informational purposes
         const changedFiles = execSync(
-          `git diff-tree --no-commit-id --name-only -r ${commit.hash}`
+          `git diff-tree --no-commit-id --name-only -r ${commit.hash}`,
         )
           .toString()
           .trim();
@@ -322,7 +322,7 @@ export function checkVersions(isCI: boolean = false): void {
         if (!jsonOutput) {
           const changedFilesCount = changedFilesList.length;
           console.log(
-            colors.dim + `  Changed files: ${changedFilesCount}` + colors.reset
+            colors.dim + `  Changed files: ${changedFilesCount}` + colors.reset,
           );
         }
 
@@ -337,7 +337,7 @@ export function checkVersions(isCI: boolean = false): void {
               const normalizedFile = file.replace(/\\/g, "/");
               const normalizedDir = versionedPackage.directory.replace(
                 /\\/g,
-                "/"
+                "/",
               );
               // For root directory ('.'), any file is considered a match
               return normalizedDir === "."
@@ -389,7 +389,7 @@ export function checkVersions(isCI: boolean = false): void {
             colors.dim +
               `No versioning commits found since ${prefix}` +
               colors.reset +
-              "\n"
+              "\n",
           );
         }
         continue;
@@ -401,7 +401,7 @@ export function checkVersions(isCI: boolean = false): void {
       const errMsg = error instanceof Error ? error.message : "Unknown error";
       if (!jsonOutput) {
         console.error(
-          `${colors.red}⛔️ ${colors.bright}Error: Failed to analyze commits for package "${versionedPackage.name}".${colors.reset}\n${colors.red}${errMsg}${colors.reset}`
+          `${colors.red}⛔️ ${colors.bright}Error: Failed to analyze commits for package "${versionedPackage.name}".${colors.reset}\n${colors.red}${errMsg}${colors.reset}`,
         );
       }
       if (isCI) process.exit(1);
@@ -412,15 +412,15 @@ export function checkVersions(isCI: boolean = false): void {
   const packageChangeList = Array.from(packageChanges.entries());
   config.versionedPackages.forEach((pkg) => {
     const hasPackageChanges = packageChangeList.some(
-      ([pack]) => pack.name === pkg.name
+      ([pack]) => pack.name === pkg.name,
     );
     if (hasPackageChanges) {
       const changes = Array.from(
-        packageChangeList.find(([pack]) => pack.name === pkg.name)![1]
+        packageChangeList.find(([pack]) => pack.name === pkg.name)![1],
       );
       const currentVersion = getCurrentVersion(pkg.tagPrefix);
       const versionChanges = determineVersionChange(
-        changes.map((c) => c.message)
+        changes.map((c) => c.message),
       );
       const nextVersion = getNextVersion(currentVersion, versionChanges);
 
@@ -448,7 +448,7 @@ export function checkVersions(isCI: boolean = false): void {
 
   if (versionUpdates.size === 0) {
     console.log(
-      `${colors.green}${colors.bright} ✓ No version updates required!${colors.reset}`
+      `${colors.green}${colors.bright} ✓ No version updates required!${colors.reset}`,
     );
     return;
   }
@@ -459,7 +459,7 @@ export function checkVersions(isCI: boolean = false): void {
       colors.magenta +
       "🚀 Release Check Summary" +
       colors.reset +
-      "\n"
+      "\n",
   );
   console.log(colors.dim + "=".repeat(50) + colors.reset + "\n");
 
@@ -467,12 +467,12 @@ export function checkVersions(isCI: boolean = false): void {
   printSection("📦 Changes Detected:");
   if (packageChanges.size > 0) {
     const maxPkgLength = Math.max(
-      ...Array.from(packageChanges.keys()).map((pack) => pack.name.length)
+      ...Array.from(packageChanges.keys()).map((pack) => pack.name.length),
     );
     for (const [pack, changes] of packageChanges.entries()) {
       const pkg = pack.name.padEnd(maxPkgLength);
       console.log(
-        `${colors.green}✓${colors.reset} ${pkg}  ${colors.cyan}${changes.length}${colors.reset} commits`
+        `${colors.green}✓${colors.reset} ${pkg}  ${colors.cyan}${changes.length}${colors.reset} commits`,
       );
     }
   } else {
@@ -483,13 +483,13 @@ export function checkVersions(isCI: boolean = false): void {
   printSection("📝 Version Updates:");
   if (versionUpdates.size > 0) {
     const maxPkgLength = Math.max(
-      ...Array.from(versionUpdates.keys()).map((pack) => pack.name.length)
+      ...Array.from(versionUpdates.keys()).map((pack) => pack.name.length),
     );
     for (const [pack, update] of versionUpdates.entries()) {
       const pkg = pack.name.padEnd(maxPkgLength);
       const { tagPrefix, currentVersion, nextVersion } = update;
       console.log(
-        `${colors.green}✓${colors.reset} ${pkg}  ${colors.dim}${tagPrefix}${currentVersion}${colors.reset} → ${colors.bright}${tagPrefix}${nextVersion}${colors.reset}`
+        `${colors.green}✓${colors.reset} ${pkg}  ${colors.dim}${tagPrefix}${currentVersion}${colors.reset} → ${colors.bright}${tagPrefix}${nextVersion}${colors.reset}`,
       );
     }
   } else {
@@ -504,7 +504,7 @@ export function checkVersions(isCI: boolean = false): void {
       console.log(`\n${colors.cyan}${pkg}${colors.reset}:`);
       for (const { hash, message, reasons } of changes) {
         console.log(
-          `  ${colors.green}•${colors.reset} ${formatCommit(hash, message)}`
+          `  ${colors.green}•${colors.reset} ${formatCommit(hash, message)}`,
         );
         for (const reason of reasons) {
           console.log(`    ${colors.dim}↳ ${reason}${colors.reset}`);
@@ -512,7 +512,9 @@ export function checkVersions(isCI: boolean = false): void {
       }
     }
   } else {
-    console.log(`${colors.yellow}⚠ No detailed changes to show${colors.reset}`);
+    console.log(
+      `${colors.yellow}⚠ No detailed changes to show${colors.reset}`,
+    );
   }
 
   console.log("\n" + colors.dim + "=".repeat(50) + colors.reset + "\n");
@@ -530,6 +532,6 @@ export {
 // Main execution
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   checkVersions(
-    process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true"
+    process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true",
   );
 }

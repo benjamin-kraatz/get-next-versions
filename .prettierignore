@@ -1,0 +1,9 @@
+# Directories
+node_modules
+bin
+dist
+build
+out
+
+# Files
+release-config.json
