@@ -1,6 +1,6 @@
 import { formatCommit } from "./commits.js";
 import { colors, printSection } from "./helpers.js";
-import { CommitInfo, Package, VersionUpdate } from "./types.js";
+import { CLIOptions, CommitInfo, Package, VersionUpdate } from "./types.js";
 
 /**
  * Outputs the release summary to the console in a human-readable format or
@@ -14,13 +14,16 @@ import { CommitInfo, Package, VersionUpdate } from "./types.js";
  */
 export function output(
   mode: "json" | "cli",
-  packageChanges: Map<Package, CommitInfo[]>,
-  versionUpdates: Map<Package, VersionUpdate>,
+  data: {
+    packageChanges: Map<Package, CommitInfo[]>;
+    versionUpdates: Map<Package, VersionUpdate>;
+    cliOptions: CLIOptions;
+  },
 ): void {
   if (mode === "json") {
-    outputJSON(versionUpdates);
+    outputJSON(data.versionUpdates);
   } else {
-    outputCLI(packageChanges, versionUpdates);
+    outputCLI(data.cliOptions, data.packageChanges, data.versionUpdates);
   }
 }
 
@@ -66,6 +69,7 @@ function outputJSON(versionUpdates: Map<Package, VersionUpdate>): void {
  * value is a VersionUpdate object containing version information.
  */
 function outputCLI(
+  cliOptions: CLIOptions,
   packageChanges: Map<Package, CommitInfo[]>,
   versionUpdates: Map<Package, VersionUpdate>,
 ): void {

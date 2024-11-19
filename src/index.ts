@@ -33,11 +33,13 @@ const packageChanges = new Map<Package, CommitInfo[]>();
 const versionUpdates = new Map<Package, VersionUpdate>();
 let jsonOutput = false;
 let verboseMode = false;
+let createTags = false;
 
 export function checkVersions(isCI: boolean = false): void {
   const args = process.argv.slice(2);
   jsonOutput = args.includes("--json");
   verboseMode = args.includes("--verbose");
+  createTags = args.includes("--publish");
 
   packageChanges.clear();
   versionUpdates.clear();
@@ -290,7 +292,16 @@ export function checkVersions(isCI: boolean = false): void {
     }
   });
 
-  output(jsonOutput ? "json" : "cli", packageChanges, versionUpdates);
+  output(jsonOutput ? "json" : "cli", {
+    packageChanges,
+    versionUpdates,
+    cliOptions: {
+      configPath: CONFIG_PATH,
+      jsonOutput,
+      verboseMode,
+      createTags,
+    },
+  });
 }
 
 // Export functions for testing
