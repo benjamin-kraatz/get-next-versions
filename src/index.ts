@@ -433,7 +433,7 @@ export function checkVersions(isCI: boolean = false): void {
   // Output results
   if (jsonOutput) {
     const output: Map<
-      Package,
+      string,
       {
         currentVersion: string;
         nextVersion: string;
@@ -441,7 +441,7 @@ export function checkVersions(isCI: boolean = false): void {
       }
     > = new Map();
     versionUpdates.forEach((version, pkg) => {
-      output.set(pkg, {
+      output.set(pkg.name, {
         currentVersion: version.currentVersion,
         nextVersion: version.nextVersion,
         hasChanges: version.hasChanges,
