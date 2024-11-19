@@ -43,3 +43,8 @@ export interface CommitInfo {
   breaking: boolean;
   reasons: string[];
 }
+
+export interface CommitMessage {
+  hash: string;
+  message: string;
+}

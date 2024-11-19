@@ -1,18 +1,25 @@
 import { execSync } from "node:child_process";
 import { colors } from "./helpers.js";
+import { CommitMessage } from "./types.js";
 
 /**
  * Retrieves all commits since the given tag.
  *
- * The commits are fetched using `git log`, and the commit range is passed as an argument.
- * The range is determined by calling `getCommitRange` with the given tag.
+ * This function fetches commits using `git log` with a commit range determined by `getCommitRange`.
+ * It parses the output to create an array of `CommitMessage` objects.
  *
- * @param tag - The tag to calculate the commit range from.
- * @returns An array of commits, or an empty array if an error occurs.
+ * @param tag - The tag prefix to use as the starting point for the commit range.
+ * @returns An array of `CommitMessage` objects, each containing a commit hash and message.
+ *          Returns an empty array if no commits are found or if an error occurs.
  */
-export function getCommitsForTag(tag: string): string[] {
+export function getCommitsForTag(tag: string): CommitMessage[] {
   const commitRange = getCommitRange(tag);
-  return getCommits(commitRange);
+  return getCommits(commitRange)
+    .map((line) => {
+      const [hash, ...messageParts] = line.split(" ");
+      return { hash: hash.trim(), message: messageParts.join(" ").trim() };
+    })
+    .filter((c) => c.hash && c.message);
 }
 
 /**
