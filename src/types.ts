@@ -22,6 +22,13 @@ export interface Package {
   dependsOn: string[];
 }
 
+export interface CLIOptions {
+  configPath: string;
+  jsonOutput: boolean;
+  verboseMode?: boolean;
+  createTags?: boolean;
+}
+
 export interface VersionChanges {
   major: boolean;
   minor: boolean;

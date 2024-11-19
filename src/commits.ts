@@ -96,9 +96,10 @@ export function getTagInfos(tag: string):
  * @returns The commit range to analyze, either a specific range or just HEAD.
  */
 export function getCommitRange(prefix: string, limit?: number): string {
+  const limitUse = limit && limit > 0 && limit < 1_000 ? limit : undefined;
   const lastTag = getLastTag(prefix);
   const until = lastTag ? `${lastTag}..HEAD` : "HEAD";
-  return until + (limit ? `~${limit}` : "");
+  return until + (limitUse ? `~${limitUse}` : "");
 }
 
 /**
@@ -145,6 +146,36 @@ export function getChangedFilesInCommit(commitHash: string): string[] {
 }
 
 /**
+ * Creates a new git tag with the given name.
+ *
+ * @param tag - The name of the tag to create.
+ * @param publish - If true, the tag will be pushed to the origin repository
+ * after creation.
+ */
+export function createTag(tag: string, publish: boolean = true): void {
+  runCommand(`git tag ${tag}`);
+  if (publish) {
+    runCommand(`git push origin ${tag}`);
+  }
+}
+
+/**
+ * Runs a command and returns the result as a string.
+ *
+ * Returns `undefined` if the command fails or produces no output.
+ *
+ * @param command - The command to run.
+ * @returns The output of the command as a string, if successful.
+ */
+function runCommand(command: string): string | undefined {
+  try {
+    return execSync(command).toString().trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Retrieves a list of commits within a given range.
  *
  * The commits are fetched using `git log`, and the commit range is passed
@@ -169,21 +200,5 @@ function getCommits(commitRange: string): string[] {
     return commitsRaw.toString().trim().split("\n").filter(Boolean);
   } catch {
     return [];
-  }
-}
-
-/**
- * Runs a command and returns the result as a string.
- *
- * Returns `undefined` if the command fails or produces no output.
- *
- * @param command - The command to run.
- * @returns The output of the command as a string, if successful.
- */
-function runCommand(command: string): string | undefined {
-  try {
-    return execSync(command).toString().trim();
-  } catch {
-    return undefined;
   }
 }

@@ -112,6 +112,28 @@ git push origin "pkg-v1.1.0" # or git push --tags
 
 The tool automatically detects if it's running in a CI environment (GitHub Actions, Jenkins, etc.) and will output JSON format when appropriate. Check out the [output examples below](#cli-output-formats).
 
+### CLI Flags
+
+The following command-line flags are available to customize the behavior of `get-next-versions`:
+
+| Flag        | Description                                                                                                                                                                        |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--json`    | Output results in JSON format instead of human-readable CLI output. Good for CI environments.                                                                                      |
+| `--verbose` | Enable verbose logging mode. Shows detailed information about commit analysis, file changes, and decision-making process (does not work in CI or when `--json` is used)            |
+| `--publish` | Automatically create and push git tags when new versions are detected. This eliminates the need for manual tag creation and pushing (does not work in CI or when `--json` is used) |
+
+When `--publish` is not used, the CLI will enter an interactive mode after detecting version changes, asking whether to:
+
+- Create and publish tags (Y) - this is the default
+- Skip tag creation (N)
+- Create tags without publishing (C)
+
+This interactive mode provides flexibility when you want to review the changes before pushing tags to the remote repository.
+
+> Note that when `--json` is used, the interactive mode is disabled and `--publish` is not available.
+
+More flags will be added in future releases to provide additional functionality and customization options.
+
 ## GitHub Action Usage
 
 ```yaml
