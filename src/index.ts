@@ -440,14 +440,14 @@ export function checkVersions(isCI: boolean = false): void {
         hasChanges: boolean;
       }
     > = new Map();
-    versionUpdates.forEach((version, pkg) => {
+    for (const [pkg, version] of versionUpdates.entries()) {
       output.set(pkg.name, {
         currentVersion: version.currentVersion,
         nextVersion: version.nextVersion,
         hasChanges: version.hasChanges,
       });
-    });
-    console.log(JSON.stringify(Object.fromEntries(output), null, 2));
+    }
+    console.log(JSON.stringify(Object.fromEntries(output)));
     return;
   }
 
