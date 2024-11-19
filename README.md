@@ -98,7 +98,7 @@ Create a `release-config.json` file in your repository root. You can find the [f
 }
 
 # Run version check (human-readable output)
-npm run version-check
+npm run version-check # pass --verbose to see more details
 
 # Run version check (JSON output)
 npm run version-check --json
