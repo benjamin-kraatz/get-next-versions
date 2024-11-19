@@ -266,14 +266,32 @@ export function checkVersions(isCI: boolean = false): void {
           scope,
           versionedPackage.name,
         );
-        const isRootPackage = scope === "";
+        const isNonScopedPackage = scope === "";
         const ignoreNonScope = config.nonScopeBehavior === "ignore";
-        if (!isScopePackage && ignoreNonScope) {
+        if (isNonScopedPackage && ignoreNonScope) {
           if (!jsonOutput) {
             console.log(
               colors.dim +
-                "  → Skipping commit from other package" +
-                `${isRootPackage ? " (root package)" : "(scoped package)"}` +
+                "  → Skipping commit from non-scoped root package" +
+                colors.reset,
+            );
+          }
+          continue;
+        }
+
+        if (!isScopePackage && !(isNonScopedPackage && !ignoreNonScope)) {
+          // the commit does not belong to this package.
+          // Skip adding it to the changes list.
+          // BUT: our power is to check
+          // - if any dependencies are affected
+          // - and if so, and the package is affected by the dependency changes,
+          //   then we should add this commit to the changes list.
+          if (!jsonOutput) {
+            const isFrom = scope || "root";
+            console.log(
+              colors.dim +
+                "  → Skipping commit from non-scoped package " +
+                isFrom +
                 colors.reset,
             );
           }
