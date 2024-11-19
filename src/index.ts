@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { formatCommit } from "./commits.js";
+import { formatCommit, getCommitRange, getLastTag } from "./commits.js";
 import { colors, printSection } from "./helpers.js";
 import {
   CommitInfo,
@@ -18,26 +18,6 @@ const __dirname = dirname(__filename);
 // Load configuration
 const CONFIG_PATH = resolve(process.cwd(), "release-config.json");
 let config: Config | undefined;
-
-function getLastTag(prefix: string): string {
-  try {
-    // For root packages with just 'v', we need to be more careful about the match pattern
-    const matchPattern = prefix === "v" ? "v[0-9]*" : `${prefix}*`;
-    // Redirect stderr to /dev/null to suppress "fatal: No names found" message
-    return execSync(
-      `git describe --tags --match "${matchPattern}" --abbrev=0 2>/dev/null`,
-    )
-      .toString()
-      .trim();
-  } catch {
-    return "";
-  }
-}
-
-function getCommitRange(prefix: string): string {
-  const lastTag = getLastTag(prefix);
-  return lastTag ? `${lastTag}..HEAD` : "HEAD";
-}
 
 function getCurrentVersion(prefix: string): string {
   const lastTag = getLastTag(prefix);
