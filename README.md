@@ -66,16 +66,21 @@ npm install --save-dev get-next-versions
 
 ### Configuration
 
-Create a `release-config.json` file in your repository root:
+Create a `release-config.json` file in your repository root. You can find the [full configuration below](#configuration-options):
 
 ```json
 {
   "versionedPackages": [
     {
-      "name": "your-package",
+      "name": "app",
+      "tagPrefix": "app-v",
+      "directory": "apps/app",
+      "dependsOn": ["packages/package-a"]
+    },
+    {
+      "name": "package-a",
       "tagPrefix": "pkg-v",
-      "directory": "packages/your-package",
-      "dependsOn": ["packages/*"]
+      "directory": "packages/package-a"
     }
   ]
 }
@@ -94,6 +99,9 @@ Create a `release-config.json` file in your repository root:
 # Run version check (human-readable output)
 npm run version-check
 
+# Run version check (JSON output)
+npm run version-check --json
+
 # Recommended: when there are changes and new versions are detected,
 # add the new tags to your repository
 # For example: pkg-v1.1.0 was detected
@@ -101,7 +109,7 @@ git tag "pkg-v1.1.0"
 git push origin "pkg-v1.1.0" # or git push --tags
 ```
 
-The tool automatically detects if it's running in a CI environment (GitHub Actions, Jenkins, etc.) and will output JSON format when appropriate.
+The tool automatically detects if it's running in a CI environment (GitHub Actions, Jenkins, etc.) and will output JSON format when appropriate. Check out the [output examples below](#cli-output-formats).
 
 ## GitHub Action Usage
 
@@ -268,29 +276,43 @@ The tool provides two output formats:
 1. **Human-Readable Output** (default in non-CI environments):
 
    ```
-   🚀 Release Check Summary
-   ==================================================
+    🚀 Release Check Summary
+    ==================================================
+    📦 Changes Detected:
+    ✓ app: 2 commits
+    ✓ package-a: 3 commits
 
-   📦 Changes Detected:
-   ✓ your-package: 5 commits
+    📝 Version Updates:
+    ✓ app: app-v1.0.0 → app-v1.1.0
+    ✓ package-a: pkg-v2.1.5 → pkg-v3.0.0
 
-   📝 Version Updates:
-   ✓ your-package: pkg-v1.0.0 → pkg-v1.1.0
+    🔍 Detailed Changes:
+    app:
+      • abc0102 feat(app): add new feature
+        ↳ Direct changes in apps/app
+      • ghi9012 fix(app): fix bug
+        ↳ Changes in dependent package packages/package-a
+    package-a:
+      • abc1234 feat(package-a): add new feature
+        ↳ Direct changes in packages/package-a
+      • def5678 feat(package-a)!: breaking change
+        ↳ Direct changes in packages/package-a
+      • ghi9012 fix(package-a): fix bug
+        ↳ Direct changes in packages/package-a
 
-   🔍 Detailed Changes:
-   your-package:
-     • abc1234 feat(your-package): add new feature
-       ↳ Direct changes in packages/your-package
-     • def5678 fix(your-package): fix bug
-       ↳ Direct changes in packages/your-package
    ```
 
 2. **JSON Output** (automatic in CI environments):
    ```json
    {
-     "your-package": {
+     "app": {
        "currentVersion": "1.0.0",
        "nextVersion": "1.1.0",
+       "hasChanges": true
+     },
+     "package-a": {
+       "currentVersion": "2.1.5",
+       "nextVersion": "3.0.0",
        "hasChanges": true
      }
    }
